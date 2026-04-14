@@ -1,0 +1,27 @@
+:root {
+  color-scheme: light;
+  --app-bg: #f4f7fb;
+  --app-panel: rgba(255, 255, 255, 0.8);
+  --app-panel-strong: rgba(255, 255, 255, 0.95);
+  --app-border: rgba(15, 23, 42, 0.08);
+  --app-text: #162033;
+  --app-text-soft: #5b667a;
+  --app-accent: #0f766e;
+  --app-accent-2: #1d4ed8;
+  --app-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  --app-gradient: linear-gradient(135deg, #0f766e 0%, #1d4ed8 55%, #0ea5e9 100%);
+}
+
+html.dark {
+  color-scheme: dark;
+  --app-bg: #09111c;
+  --app-panel: rgba(14, 23, 36, 0.82);
+  --app-panel-strong: rgba(12, 19, 31, 0.94);
+  --app-border: rgba(148, 163, 184, 0.12);
+  --app-text: #e5edf7;
+  --app-text-soft: #98a8bb;
+  --app-accent: #22c55e;
+  --app-accent-2: #38bdf8;
+  --app-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
+  --app-gradient: linear-gradient(135deg, #0f172a 0%, #164e63 45%, #14532d 100%);
+}
