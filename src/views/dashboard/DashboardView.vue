@@ -35,18 +35,20 @@
         </div>
 
         <el-empty v-if="recentNotes.length === 0" description="还没有笔记" />
-        <el-timeline v-else>
-          <el-timeline-item
-            v-for="item in recentNotes"
-            :key="item.id"
-            :timestamp="formatDate(item.updatedAt)"
-            placement="top"
-          >
-            <div style="font-weight: 700;">{{ item.title }}</div>
-            <div class="page-subtitle">{{ item.category || '未分类' }} · {{ item.tags || '无标签' }}</div>
-            <div style="margin-top: 8px; line-height: 1.8;">{{ item.summary || stripHtml(item.content).slice(0, 80) }}</div>
-          </el-timeline-item>
-        </el-timeline>
+        <div v-else class="recent-notes-scroll scrollbar-hidden">
+          <el-timeline>
+            <el-timeline-item
+              v-for="item in recentNotes"
+              :key="item.id"
+              :timestamp="formatDate(item.updatedAt)"
+              placement="top"
+            >
+              <div style="font-weight: 700;">{{ item.title }}</div>
+              <div class="page-subtitle">{{ item.category || '未分类' }} · {{ item.tags || '无标签' }}</div>
+              <div style="margin-top: 8px; line-height: 1.8;">{{ item.summary || stripHtml(item.content).slice(0, 80) }}</div>
+            </el-timeline-item>
+          </el-timeline>
+        </div>
       </div>
 
       <div style="display: grid; gap: 18px;">
@@ -157,3 +159,17 @@ async function loadData() {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.recent-notes-scroll {
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+@media (max-width: 1080px) {
+  .recent-notes-scroll {
+    max-height: 420px;
+  }
+}
+</style>

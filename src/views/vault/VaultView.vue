@@ -1,5 +1,5 @@
 <template>
-  <div class="page-shell">
+  <div class="page-shell vault-page-shell">
     <div class="toolbar-row" style="justify-content: space-between; margin-bottom: 18px;">
       <div>
         <h1 class="page-title">账号密码保险箱</h1>
@@ -16,8 +16,8 @@
       </div>
     </div>
 
-    <div class="section-card" style="padding: 18px;">
-      <el-row :gutter="18">
+    <div class="section-card vault-list-card">
+      <el-row :gutter="18" class="vault-list-grid scrollbar-hidden">
         <el-col v-for="item in tableData" :key="item.id" :xs="24" :sm="12" :lg="8">
           <div class="metric-card" style="margin-bottom: 18px;">
             <div class="toolbar-row" style="justify-content: space-between;">
@@ -173,3 +173,43 @@ async function removeItem(id) {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.vault-page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.vault-list-card {
+  flex: 1;
+  min-height: 0;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.vault-list-grid {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
+  align-content: start;
+}
+
+@media (max-width: 1100px) {
+  .vault-page-shell {
+    overflow: auto;
+  }
+
+  .vault-list-card {
+    overflow: visible;
+  }
+
+  .vault-list-grid {
+    height: auto;
+    overflow: visible;
+  }
+}
+</style>

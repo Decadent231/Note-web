@@ -38,39 +38,20 @@
       </el-menu>
 
       <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div class="sidebar-user-name">{{ userStore.user?.nickname }}</div>
-          <div class="sidebar-user-email">{{ userStore.user?.email }}</div>
+        <div class="sidebar-footer-row">
+          <div class="sidebar-user">
+            <div class="sidebar-user-name">{{ userStore.user?.nickname }}</div>
+            <div class="sidebar-user-email">{{ userStore.user?.email }}</div>
+          </div>
+          <el-button class="theme-fab" circle @click="themeStore.toggleTheme()">
+            <el-icon><component :is="themeStore.mode === 'dark' ? Sunny : Moon" /></el-icon>
+          </el-button>
         </div>
       </div>
     </aside>
 
     <div class="layout-main">
-      <header class="layout-header glass-panel">
-        <div>
-          <div class="header-title">{{ currentTitle }}</div>
-          <div class="header-subtitle">已连接阿里云后端 · 101.201.235.13</div>
-        </div>
-        <div class="header-actions">
-          <el-button circle @click="themeStore.toggleTheme()">
-            <el-icon><component :is="themeStore.mode === 'dark' ? Sunny : Moon" /></el-icon>
-          </el-button>
-          <el-dropdown>
-            <span class="user-chip">
-              {{ userStore.user?.nickname }}
-              <el-icon><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/profile')">个人中心</el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </header>
-
-      <main class="layout-content">
+      <main class="layout-content scrollbar-hidden">
         <router-view />
       </main>
     </div>
@@ -78,9 +59,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, DataAnalysis, Document, List, Lock, Moon, Sunny, User } from '@element-plus/icons-vue'
+import { DataAnalysis, Document, List, Lock, Moon, Sunny, User } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 
@@ -88,8 +68,6 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
-
-const currentTitle = computed(() => route.meta.title || '工作台')
 
 function handleLogout() {
   userStore.logout()
@@ -99,11 +77,12 @@ function handleLogout() {
 
 <style scoped>
 .layout-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 18px;
   padding: 18px;
+  overflow: hidden;
 }
 
 .layout-sidebar {
@@ -111,6 +90,8 @@ function handleLogout() {
   padding: 22px 18px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .brand-block {
@@ -139,6 +120,10 @@ function handleLogout() {
 .nav-menu {
   border-right: none;
   background: transparent;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .nav-menu :deep(.el-menu-item) {
@@ -156,6 +141,13 @@ function handleLogout() {
   padding: 14px 10px 4px;
 }
 
+.sidebar-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .sidebar-user-name {
   font-size: 16px;
   font-weight: 700;
@@ -169,59 +161,61 @@ function handleLogout() {
 
 .layout-main {
   min-width: 0;
-}
-
-.layout-header {
-  border-radius: 24px;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.header-title {
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.header-subtitle {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--app-text-soft);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-chip {
-  min-width: 132px;
-  height: 42px;
-  padding: 0 14px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: var(--app-panel);
-  border: 1px solid var(--app-border);
-  cursor: pointer;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .layout-content {
   min-width: 0;
+  height: 100%;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.theme-fab {
+  width: 58px;
+  height: 58px;
+  border: 1px solid color-mix(in srgb, var(--app-accent-2) 28%, var(--app-border));
+  background: linear-gradient(160deg, var(--app-panel-strong), color-mix(in srgb, var(--app-panel) 82%, transparent));
+  color: var(--app-text);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(18px);
+  flex-shrink: 0;
+}
+
+.theme-fab :deep(.el-icon) {
+  font-size: 22px;
+}
+
+.theme-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, 0.24);
 }
 
 @media (max-width: 1080px) {
   .layout-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .layout-sidebar {
     padding-bottom: 12px;
+    overflow: visible;
+  }
+
+  .nav-menu {
+    overflow: visible;
+  }
+
+  .layout-main {
+    overflow: visible;
+  }
+
+  .layout-content {
+    height: auto;
+    overflow: visible;
   }
 }
 </style>
