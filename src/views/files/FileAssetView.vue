@@ -137,7 +137,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showPreview" :title="previewName" width="80%" top="4vh" destroy-on-close>
+    <el-dialog v-model="showPreview" :title="previewName" width="80%" top="4vh" destroy-on-close @close="revokePreviewUrl">
       <div class="preview-container">
         <img v-if="previewType === 'image'" :src="previewUrl" class="preview-image" />
         <iframe v-else-if="previewType === 'pdf'" :src="previewUrl" class="preview-iframe" />
@@ -326,19 +326,29 @@ async function deleteFile(row) {
   } catch { /* cancelled */ }
 }
 
-function getDownloadUrl(row) {
-  const token = storage.get('note-font-token', '')
-  const base = import.meta.env.VITE_API_BASE || ''
-  return `${base}/note/files/${row.id}/download?token=${encodeURIComponent(token)}`
-}
-
-function downloadFile(row) {
-  const link = document.createElement('a')
-  link.href = getDownloadUrl(row)
-  link.download = row.originalName
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+async function downloadFile(row) {
+  try {
+    const base = import.meta.env.VITE_API_BASE || ''
+    const token = storage.get('note-font-token', '')
+    const resp = await fetch(`${base}/note/files/${row.id}/download`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!resp.ok) {
+      ElMessage.error('下载失败')
+      return
+    }
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = row.originalName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败')
+  }
 }
 
 async function previewFile(row) {
@@ -355,26 +365,35 @@ async function previewFile(row) {
   previewName.value = row.originalName
   const base = import.meta.env.VITE_API_BASE || ''
   const token = storage.get('note-font-token', '')
+  const url = `${base}/note/files/${row.id}/preview`
 
-  if (isImage) {
-    previewUrl.value = `${base}/note/files/${row.id}/preview?token=${encodeURIComponent(token)}`
-    previewType.value = 'image'
-  } else if (isPdf) {
-    previewUrl.value = `${base}/note/files/${row.id}/preview?token=${encodeURIComponent(token)}`
-    previewType.value = 'pdf'
-  } else if (isText) {
-    try {
-      const resp = await fetch(`${base}/note/files/${row.id}/preview`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+  try {
+    if (isText) {
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       previewText.value = await resp.text()
       previewType.value = 'text'
-    } catch {
-      ElMessage.error('无法加载文件内容')
-      return
+    } else {
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      if (!resp.ok) {
+        ElMessage.error('预览失败，请下载后查看')
+        return
+      }
+      const blob = await resp.blob()
+      revokePreviewUrl()
+      previewUrl.value = URL.createObjectURL(blob)
+      previewType.value = isImage ? 'image' : 'pdf'
     }
+    showPreview.value = true
+  } catch {
+    ElMessage.error('无法加载文件预览')
   }
-  showPreview.value = true
+}
+
+function revokePreviewUrl() {
+  if (previewUrl.value && previewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
 }
 
 onMounted(() => {
