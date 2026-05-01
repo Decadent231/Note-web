@@ -64,6 +64,14 @@
             <span v-else style="color: var(--el-text-color-placeholder);">—</span>
           </template>
         </el-table-column>
+        <el-table-column label="关联知识库" width="100" align="center">
+          <template #default="{ row }">
+            <el-button v-if="row._linkedWikiCount > 0" text type="primary" size="small" @click="viewLinkedWikiPages(row)">
+              {{ row._linkedWikiCount }} 页
+            </el-button>
+            <span v-else style="color: var(--el-text-color-placeholder);">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="上传时间" width="160" align="center">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
@@ -162,6 +170,16 @@
         <el-empty v-if="linkedNotes.length === 0" description="暂无关联笔记" :image-size="60" />
       </div>
     </el-dialog>
+
+    <el-dialog v-model="showLinkedWiki" :title="linkedFileName + ' - 关联知识库页面'" width="560px">
+      <div class="linked-notes-list">
+        <div v-for="p in linkedWikiPages" :key="p.id" class="linked-note-row">
+          <span class="linked-note-title">{{ p.title }}</span>
+          <span class="linked-note-time">{{ formatDate(p.updatedAt) }}</span>
+        </div>
+        <el-empty v-if="linkedWikiPages.length === 0" description="暂无关联知识库页面" :image-size="60" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -199,6 +217,9 @@ const previewText = ref('')
 const showLinkedNotes = ref(false)
 const linkedNotes = ref([])
 const linkedFileName = ref('')
+
+const showLinkedWiki = ref(false)
+const linkedWikiPages = ref([])
 
 function formatDate(v) {
   return v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'
@@ -265,6 +286,12 @@ async function loadData() {
       } catch {
         r._linkedNoteCount = 0
       }
+      try {
+        const pages = await noteApi.listFileWikiPages(r.id)
+        r._linkedWikiCount = (pages || []).length
+      } catch {
+        r._linkedWikiCount = 0
+      }
     }))
     files.value = records
     pagination.total = data.total || 0
@@ -281,6 +308,16 @@ async function viewLinkedNotes(row) {
     linkedNotes.value = []
   }
   showLinkedNotes.value = true
+}
+
+async function viewLinkedWikiPages(row) {
+  linkedFileName.value = row.originalName
+  try {
+    linkedWikiPages.value = await noteApi.listFileWikiPages(row.id) || []
+  } catch {
+    linkedWikiPages.value = []
+  }
+  showLinkedWiki.value = true
 }
 
 async function loadFolders() {

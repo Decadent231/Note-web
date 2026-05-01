@@ -66,6 +66,20 @@
           <div class="content-panel-body scrollbar-hidden">
             <div v-if="currentPage.contentType === 'markdown'" class="md-preview-body" v-html="renderMarkdown(currentPage.content || '')"></div>
             <div v-else class="ql-editor" v-html="currentPage.content || '<p>暂无内容</p>'"></div>
+            <div class="wiki-linked-files-section">
+              <div class="wiki-linked-files-header">
+                <span class="wiki-linked-files-title">关联文件</span>
+                <el-button text type="primary" size="small" @click="openFilePicker">选择文件</el-button>
+              </div>
+              <div v-if="linkedFiles.length" class="linked-files-list">
+                <div v-for="f in linkedFiles" :key="f.id" class="linked-file-chip">
+                  <span class="linked-file-name">{{ f.originalName }}</span>
+                  <span class="linked-file-size">{{ formatSize(f.fileSize) }}</span>
+                  <el-button text type="danger" size="small" @click="unlinkFile(f)">移除</el-button>
+                </div>
+              </div>
+              <div v-else class="linked-files-empty">暂未关联文件</div>
+            </div>
           </div>
         </template>
         <el-empty v-else description="从左侧目录选择页面查看" />
@@ -107,6 +121,41 @@
         <el-button type="primary" :loading="saving" @click="savePage">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="filePickerVisible" title="选择文件" width="640px" destroy-on-close>
+      <el-input v-model="filePickerKeyword" placeholder="搜索文件名" clearable @input="debounceLoadFiles" style="margin-bottom: 12px;" />
+      <div class="file-picker-list">
+        <div
+          v-for="f in availableFiles"
+          :key="f.id"
+          class="file-picker-row"
+          :class="{ selected: isFileLinked(f.id) }"
+          @click="toggleFileSelection(f)"
+        >
+          <div class="file-picker-info">
+            <span class="file-picker-name">{{ f.originalName }}</span>
+            <span class="file-picker-size">{{ formatSize(f.fileSize) }}</span>
+          </div>
+          <el-icon v-if="isFileLinked(f.id)" class="file-picker-check"><Check /></el-icon>
+        </div>
+        <el-empty v-if="availableFiles.length === 0" description="暂无可选文件" :image-size="60" />
+      </div>
+      <div class="pagination-wrap" style="margin-top: 8px;">
+        <el-pagination
+          background
+          small
+          layout="prev, pager, next, total"
+          :total="filePickerTotal"
+          :page-size="filePickerSize"
+          :current-page="filePickerCurrent"
+          @current-change="changeFilePickerPage"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="filePickerVisible = false">取消</el-button>
+        <el-button type="primary" :loading="linkingFiles" @click="confirmLinkFiles">确定关联</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -114,7 +163,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Delete, ArrowLeft } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, Check } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -136,6 +185,17 @@ const newPage = reactive({ title: '', contentType: 'markdown', parentId: null })
 
 const showEdit = ref(false)
 const editForm = reactive({ id: null, title: '', content: '', contentType: 'markdown' })
+
+const linkedFiles = ref([])
+const filePickerVisible = ref(false)
+const filePickerKeyword = ref('')
+const availableFiles = ref([])
+const filePickerTotal = ref(0)
+const filePickerCurrent = ref(1)
+const filePickerSize = 10
+const linkingFiles = ref(false)
+const pendingLinkFileIds = ref([])
+let filePickerDebounce = null
 
 const md = new MarkdownIt({
   html: false,
@@ -165,6 +225,100 @@ async function onTreeSelect(data) {
   if (!data?.id) return
   currentPageId.value = data.id
   try { currentPage.value = await noteApi.getWikiPage(data.id) } catch { /* ignore */ }
+  loadLinkedFiles(data.id)
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let size = bytes
+  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
+  return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i]
+}
+
+async function loadLinkedFiles(pageId) {
+  try {
+    linkedFiles.value = await noteApi.listWikiPageFiles(pageId)
+  } catch {
+    linkedFiles.value = []
+  }
+}
+
+async function unlinkFile(f) {
+  if (!currentPage.value?.id) return
+  await noteApi.unlinkWikiPageFile(currentPage.value.id, f.id)
+  linkedFiles.value = linkedFiles.value.filter(item => item.id !== f.id)
+  ElMessage.success('已移除关联')
+}
+
+function isFileLinked(fileId) {
+  return linkedFiles.value.some(f => f.id === fileId) || pendingLinkFileIds.value.includes(fileId)
+}
+
+function toggleFileSelection(f) {
+  const idx = pendingLinkFileIds.value.indexOf(f.id)
+  if (idx >= 0) {
+    pendingLinkFileIds.value.splice(idx, 1)
+  } else if (!linkedFiles.value.some(lf => lf.id === f.id)) {
+    pendingLinkFileIds.value.push(f.id)
+  }
+}
+
+function openFilePicker() {
+  if (!currentPage.value?.id) { ElMessage.warning('请先选择页面'); return }
+  pendingLinkFileIds.value = []
+  filePickerKeyword.value = ''
+  filePickerCurrent.value = 1
+  filePickerVisible.value = true
+  loadAvailableFiles()
+}
+
+async function loadAvailableFiles() {
+  try {
+    const data = await noteApi.pageFiles({
+      current: filePickerCurrent.value,
+      size: filePickerSize,
+      keyword: filePickerKeyword.value || undefined
+    })
+    availableFiles.value = data.records || []
+    filePickerTotal.value = data.total || 0
+  } catch {
+    availableFiles.value = []
+  }
+}
+
+function changeFilePickerPage(page) {
+  filePickerCurrent.value = page
+  loadAvailableFiles()
+}
+
+function debounceLoadFiles() {
+  if (filePickerDebounce) clearTimeout(filePickerDebounce)
+  filePickerDebounce = setTimeout(() => {
+    filePickerCurrent.value = 1
+    loadAvailableFiles()
+  }, 300)
+}
+
+async function confirmLinkFiles() {
+  if (!pendingLinkFileIds.value.length) {
+    filePickerVisible.value = false
+    return
+  }
+  if (!currentPage.value?.id) {
+    ElMessage.warning('请先选择页面')
+    return
+  }
+  linkingFiles.value = true
+  try {
+    await noteApi.linkWikiPageFiles(currentPage.value.id, pendingLinkFileIds.value)
+    await loadLinkedFiles(currentPage.value.id)
+    ElMessage.success('关联成功')
+    filePickerVisible.value = false
+  } finally {
+    linkingFiles.value = false
+  }
 }
 
 function addChildPage(parentData) {
@@ -461,6 +615,117 @@ onMounted(() => { loadSpace(); loadTree() })
 .md-preview-body :deep(img) { max-width: 100%; border-radius: 8px; }
 
 .md-preview-body :deep(input[type="checkbox"]) { margin-right: 6px; }
+
+.wiki-linked-files-section {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.wiki-linked-files-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.wiki-linked-files-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--el-text-color-regular);
+}
+
+.linked-files-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.linked-file-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.linked-file-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--el-text-color-primary);
+}
+
+.linked-file-size {
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+
+.linked-files-empty {
+  color: var(--el-text-color-placeholder);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.file-picker-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.file-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.file-picker-row:hover {
+  background: var(--el-fill-color-light);
+}
+
+.file-picker-row.selected {
+  background: var(--el-color-primary-light-9);
+}
+
+.file-picker-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.file-picker-name {
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-picker-size {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+  flex-shrink: 0;
+}
+
+.file-picker-check {
+  color: var(--el-color-primary);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+}
 
 @media (max-width: 900px) {
   .wiki-space-body {

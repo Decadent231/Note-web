@@ -86,5 +86,11 @@ export const noteApi = {
   linkNoteFiles: (noteId, fileIds) => http.post(`/note/notes/${noteId}/files`, fileIds),
   unlinkNoteFile: (noteId, fileId) => http.delete(`/note/notes/${noteId}/files/${fileId}`),
   listNoteFiles: (noteId) => http.get(`/note/notes/${noteId}/files`),
-  listFileNotes: (fileId) => http.get(`/note/files/${fileId}/notes`)
+  listFileNotes: (fileId) => http.get(`/note/files/${fileId}/notes`),
+
+  // Wiki Page-File links
+  linkWikiPageFiles: (pageId, fileIds) => http.post(`/note/wiki/pages/${pageId}/files`, fileIds),
+  unlinkWikiPageFile: (pageId, fileId) => http.delete(`/note/wiki/pages/${pageId}/files/${fileId}`),
+  listWikiPageFiles: (pageId) => http.get(`/note/wiki/pages/${pageId}/files`),
+  listFileWikiPages: (fileId) => http.get(`/note/files/${fileId}/wiki-pages`)
 }
