@@ -115,6 +115,24 @@ money-cloud/sql/note.sql
 money-cloud/sql/note_upgrade_20260501.sql       # 软删除 + 活动日志表
 money-cloud/sql/note_upgrade_20260501_v2.sql     # 内容类型、置顶、收藏、笔记模板表
 money-cloud/sql/note_upgrade_20260501_v3.sql     # 日历日程表、知识库空间表、知识库页面表
+money-cloud/sql/note_upgrade_20260501_v4.sql     # 文件库表 file_asset
+```
+
+## 6.1 文件库存储配置
+
+文件库存储在服务器本地目录，默认路径 `/data/note-files`，需要在服务器上创建目录并确保 Java 进程有写入权限：
+
+```bash
+mkdir -p /data/note-files
+chmod 755 /data/note-files
+```
+
+可通过以下环境变量自定义：
+
+```text
+FILE_STORAGE_PATH    # 文件存储根路径，默认 /data/note-files
+FILE_MAX_SIZE        # Spring 单文件大小限制，默认 50MB
+FILE_MAX_SIZE_MB     # 自定义文件大小限制，默认 50
 ```
 
 ## 7. 当前已接入的服务器地址

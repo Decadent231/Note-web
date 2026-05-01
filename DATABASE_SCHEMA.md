@@ -192,6 +192,7 @@
 - `parent_id`：父页面 ID，NULL 表示顶级页面
 - `title`：页面标题
 - `content`：页面内容（长文本）
+- `content_type`：内容类型，`markdown`（默认）/ `html`（富文本）
 - `sort_order`：排序字段
 - `created_at`：创建时间
 - `updated_at`：更新时间
@@ -201,3 +202,35 @@
 - `idx_page_space`：按知识库查询
 - `idx_page_parent`：按父页面查询子节点
 - `idx_page_user_space`：按用户+知识库查询
+
+## 9. 文件库表 `file_asset`
+
+用途：文件库元数据，实际文件存储在服务器本地目录 `/data/note-files/{userId}/`。
+
+字段：
+
+- `id`：主键
+- `user_id`：所属用户
+- `original_name`：原始文件名
+- `stored_name`：存储文件名（UUID 重命名）
+- `relative_path`：相对路径（`userId/storedName`）
+- `file_size`：文件大小（字节）
+- `mime_type`：MIME 类型
+- `extension`：文件扩展名
+- `folder`：虚拟文件夹
+- `remark`：备注
+- `created_at`：创建时间
+- `updated_at`：更新时间
+
+索引：
+
+- `idx_file_user`：按用户查询
+- `idx_file_folder`：按用户+文件夹筛选
+- `idx_file_created`：按用户+创建时间排序
+
+说明：
+
+- 文件不存储在数据库中，仅保存元数据。实际文件存放在服务器磁盘。
+- 危险文件扩展名（exe/bat/cmd/sh 等）会被拒绝上传。
+- 默认最大文件大小 50MB，可通过环境变量 `FILE_MAX_SIZE_MB` 配置。
+- 存储路径可通过环境变量 `FILE_STORAGE_PATH` 配置，默认 `/data/note-files`。

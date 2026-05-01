@@ -583,3 +583,126 @@ Authorization: Bearer <token>
 - 地址：`/note/wiki/pages/{id}`
 
 说明：删除页面会同时删除所有子页面。
+
+## 九、文件库
+
+### 1. 上传文件
+
+- 方法：`POST`
+- 地址：`/note/files/upload`
+- 请求类型：`multipart/form-data`
+- 参数：
+  - `files`：文件（支持多文件，最多 5 个）
+  - `folder`：虚拟文件夹，可选
+  - `remark`：备注，可选
+
+### 2. 分页查询文件
+
+- 方法：`GET`
+- 地址：`/note/files`
+
+查询参数：
+
+- `current`：页码，默认 `1`
+- `size`：每页条数，默认 `15`
+- `keyword`：关键词，搜索文件名/备注
+- `folder`：文件夹筛选
+
+### 3. 查询单条文件
+
+- 方法：`GET`
+- 地址：`/note/files/{id}`
+
+### 4. 下载文件
+
+- 方法：`GET`
+- 地址：`/note/files/{id}/download`
+
+说明：支持 `?token=` 参数鉴权（`<a>` 标签下载无法携带 Header）
+
+### 5. 预览文件
+
+- 方法：`GET`
+- 地址：`/note/files/{id}/preview`
+
+说明：支持 `image/*`、`application/pdf`、`text/*` 预览，支持 `?token=` 参数鉴权
+
+### 6. 修改文件信息
+
+- 方法：`PUT`
+- 地址：`/note/files/{id}`
+
+查询参数：
+
+- `folder`：新文件夹
+- `remark`：新备注
+
+### 7. 删除文件
+
+- 方法：`DELETE`
+- 地址：`/note/files/{id}`
+
+说明：同时删除磁盘文件和数据库记录
+
+### 8. 查询文件夹列表
+
+- 方法：`GET`
+- 地址：`/note/files/folders`
+
+返回说明：返回当前用户所有不重复的文件夹名称
+
+### 9. 存储统计
+
+- 方法：`GET`
+- 地址：`/note/files/stats`
+
+返回说明：返回 `{ "fileCount": 10, "totalSize": 1048576 }`
+
+## 十、工作台 Dashboard
+
+### 1. 全模块数据总览
+
+- 方法：`GET`
+- 地址：`/note/dashboard/overview`
+
+返回说明：返回笔记数、wiki页面数、待办数、待办完成数、保险箱数、日程数、文件数、文件总大小
+
+### 2. 本周效率报告
+
+- 方法：`GET`
+- 地址：`/note/dashboard/weekly-report`
+
+返回说明：返回本周与上周的笔记新增数、待办完成数、操作次数对比
+
+### 3. 知识增长曲线
+
+- 方法：`GET`
+- 地址：`/note/dashboard/knowledge-growth`
+
+查询参数：
+
+- `days`：统计天数，默认 `30`
+
+返回说明：返回按日期的笔记+wiki新增数
+
+### 4. 活动热力图
+
+- 方法：`GET`
+- 地址：`/note/dashboard/activity-heatmap`
+
+查询参数：
+
+- `days`：统计天数，默认 `90`
+
+返回说明：返回按日期的操作次数，适配 ECharts Calendar Heatmap
+
+### 5. 优先待办列表
+
+- 方法：`GET`
+- 地址：`/note/dashboard/top-todos`
+
+查询参数：
+
+- `limit`：返回条数，默认 `5`
+
+返回说明：返回未完成待办按优先级+创建时间排序
