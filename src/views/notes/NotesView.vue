@@ -277,14 +277,15 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="previewVisible" :title="previewFile?.originalName || '文件预览'" width="70%" top="5vh" destroy-on-close>
+    <el-dialog v-model="previewVisible" :title="previewFile?.originalName || '文件预览'" width="70%" top="5vh" destroy-on-close @close="revokePreviewUrl">
       <div v-if="previewFile" class="file-preview-body">
-        <img v-if="previewFile.mimeType?.startsWith('image/')" :src="`${baseURL}/note/files/${previewFile.id}/preview`" class="file-preview-img" />
-        <iframe v-else :src="`${baseURL}/note/files/${previewFile.id}/preview`" class="file-preview-iframe" />
+        <img v-if="previewFile._previewType === 'image'" :src="previewUrl" class="file-preview-img" />
+        <iframe v-else-if="previewFile._previewType === 'pdf'" :src="previewUrl" class="file-preview-iframe" />
+        <pre v-else-if="previewFile._previewType === 'text'" class="file-preview-text">{{ previewFile._previewText }}</pre>
       </div>
       <template #footer>
         <el-button @click="previewVisible = false">关闭</el-button>
-        <el-button type="primary" @click="downloadPreviewFile">下载</el-button>
+        <el-button type="primary" @click="doDownload(previewFile?.id)">下载</el-button>
       </template>
     </el-dialog>
 
@@ -704,6 +705,14 @@ async function confirmLinkFiles() {
 
 const previewVisible = ref(false)
 const previewFile = ref(null)
+const previewUrl = ref('')
+
+function revokePreviewUrl() {
+  if (previewUrl.value && previewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+}
 
 function openDetail(item) {
   detailItem.value = item
@@ -711,47 +720,75 @@ function openDetail(item) {
   detailVisible.value = true
 }
 
-function onDetailContentClick(e) {
-  const btn = e.target.closest('.file-embed-btn')
-  if (!btn) return
-  const fileId = Number(btn.dataset.fileId)
-  const action = btn.dataset.action
-  if (!fileId) return
+function handleFileAction(fileId, action) {
   const file = embedFileMap.value.get(fileId)
   if (action === 'preview') {
     if (file && file.mimeType && (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf' || file.mimeType.startsWith('text/'))) {
-      previewFile.value = file
-      previewVisible.value = true
+      doPreview(file)
     } else {
-      window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+      doDownload(fileId)
     }
   } else if (action === 'download') {
-    window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+    doDownload(fileId)
   }
+}
+
+function onDetailContentClick(e) {
+  const btn = e.target.closest('.file-embed-btn')
+  if (!btn) return
+  handleFileAction(Number(btn.dataset.fileId), btn.dataset.action)
 }
 
 function onPreviewContentClick(e) {
   const btn = e.target.closest('.file-embed-btn')
   if (!btn) return
-  const fileId = Number(btn.dataset.fileId)
-  const action = btn.dataset.action
-  if (!fileId) return
-  const file = embedFileMap.value.get(fileId)
-  if (action === 'preview') {
-    if (file && file.mimeType && (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf' || file.mimeType.startsWith('text/'))) {
-      previewFile.value = file
-      previewVisible.value = true
+  handleFileAction(Number(btn.dataset.fileId), btn.dataset.action)
+}
+
+async function doPreview(file) {
+  const mime = file.mimeType || ''
+  const token = storage.get('note-font-token', '')
+  const url = `${baseURL}/note/files/${file.id}/preview`
+  try {
+    if (mime.startsWith('text/')) {
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      if (!resp.ok) throw new Error()
+      const text = await resp.text()
+      revokePreviewUrl()
+      previewFile.value = { ...file, _previewText: text, _previewType: 'text' }
     } else {
-      window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      if (!resp.ok) throw new Error()
+      const blob = await resp.blob()
+      revokePreviewUrl()
+      previewUrl.value = URL.createObjectURL(blob)
+      previewFile.value = { ...file, _previewType: mime.startsWith('image/') ? 'image' : 'pdf' }
     }
-  } else if (action === 'download') {
-    window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+    previewVisible.value = true
+  } catch {
+    ElMessage.error('预览失败，请下载后查看')
   }
 }
 
-function downloadPreviewFile() {
-  if (previewFile.value?.id) {
-    window.open(`${baseURL}/note/files/${previewFile.value.id}/download`, '_blank')
+async function doDownload(fileId) {
+  const token = storage.get('note-font-token', '')
+  try {
+    const resp = await fetch(`${baseURL}/note/files/${fileId}/download`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!resp.ok) throw new Error()
+    const blob = await resp.blob()
+    const file = embedFileMap.value.get(fileId)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file?.originalName || 'download'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败')
   }
 }
 
@@ -1409,5 +1446,19 @@ html.dark .note-row:hover {
   height: 70vh;
   border: none;
   border-radius: 8px;
+}
+
+.file-preview-text {
+  width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--el-fill-color-lighter);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>
