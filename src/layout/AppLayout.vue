@@ -7,6 +7,12 @@
         <div class="brand-subtitle">个人工作笔记 + 密码管理 + 待办协作</div>
       </div>
 
+      <div class="search-trigger" @click="searchVisible = true">
+        <el-icon><Search /></el-icon>
+        <span>搜索...</span>
+        <span class="search-trigger-shortcut">⌘K</span>
+      </div>
+
       <el-menu
         class="nav-menu"
         :default-active="route.path"
@@ -30,6 +36,14 @@
         <el-menu-item index="/todos">
           <el-icon><List /></el-icon>
           <span>待办事项</span>
+        </el-menu-item>
+        <el-menu-item index="/trash">
+          <el-icon><Delete /></el-icon>
+          <span>回收站</span>
+        </el-menu-item>
+        <el-menu-item index="/activity">
+          <el-icon><Timer /></el-icon>
+          <span>操作日志</span>
         </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
@@ -55,19 +69,39 @@
         <router-view />
       </main>
     </div>
+
+    <GlobalSearch v-model="searchVisible" />
   </div>
 </template>
 
 <script setup>
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DataAnalysis, Document, List, Lock, Moon, Sunny, User } from '@element-plus/icons-vue'
+import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
+import GlobalSearch from '@/components/GlobalSearch.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
+const searchVisible = ref(false)
+
+function handleKeydown(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault()
+    searchVisible.value = !searchVisible.value
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 
 function handleLogout() {
   userStore.logout()
@@ -115,6 +149,36 @@ function handleLogout() {
   font-size: 14px;
   color: var(--app-text-soft);
   line-height: 1.7;
+}
+
+.search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 10px 18px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  color: var(--el-text-color-placeholder);
+  font-size: 13px;
+}
+
+.search-trigger:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 0 0 1px var(--el-color-primary-light-8);
+}
+
+.search-trigger-shortcut {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--el-fill-color);
+  border: 1px solid var(--el-border-color-lighter);
 }
 
 .nav-menu {

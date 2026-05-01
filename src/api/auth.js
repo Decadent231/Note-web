@@ -6,5 +6,6 @@ export const authApi = {
   login: (payload) => http.post('/user/auth/login', payload),
   getCurrentUser: () => http.get('/user/users/me'),
   updateProfile: (payload) => http.put('/user/users/profile', payload),
-  changePassword: (payload) => http.put('/user/users/password', payload)
+  changePassword: (payload) => http.put('/user/users/password', payload),
+  verifyPassword: (password) => http.post('/user/users/verify-password', { password })
 }

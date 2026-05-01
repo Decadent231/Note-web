@@ -3,7 +3,7 @@
     <div class="toolbar-row page-action-row">
       <div>
         <h1 class="page-title">工作笔记</h1>
-        <p class="page-subtitle">支持拖动排序、详情查看、富文本编辑与分类标签管理。</p>
+        <p class="page-subtitle">支持 Markdown / 富文本双模式编辑、拖动排序、置顶收藏、模板创建。</p>
       </div>
       <el-button type="primary" size="large" @click="openCreate">新建笔记</el-button>
     </div>
@@ -22,7 +22,7 @@
         <div class="panel-head">
           <div>
             <div class="panel-title">笔记列表</div>
-            <div class="panel-subtitle">每条笔记只占一行，拖动行即可调整当前页顺序</div>
+            <div class="panel-subtitle">拖动行可调整顺序，置顶笔记始终在最上方</div>
           </div>
           <el-tag type="info">{{ pagination.total }}</el-tag>
         </div>
@@ -32,7 +32,7 @@
             v-for="(item, index) in tableData"
             :key="item.id"
             class="note-row"
-            :class="{ active: selected?.id === item.id, dragging: dragState.id === item.id }"
+            :class="{ active: selected?.id === item.id, dragging: dragState.id === item.id, pinned: item.pinned === 1 }"
             draggable="true"
             @click="selected = item"
             @dragstart="handleDragStart(item.id)"
@@ -44,7 +44,9 @@
 
             <div class="note-row-main">
               <div class="note-row-line">
+                <el-icon v-if="item.pinned === 1" class="pin-icon" title="已置顶"><Top /></el-icon>
                 <span class="note-row-title">{{ item.title }}</span>
+                <el-tag v-if="item.contentType === 'markdown'" size="small" type="warning" effect="plain" class="note-tag">MD</el-tag>
                 <span v-if="item.summary" class="note-row-summary">（{{ item.summary }}）</span>
                 <span class="note-row-divider"></span>
                 <span class="note-meta-chip">{{ item.category || '未分类' }}</span>
@@ -63,6 +65,12 @@
             <div class="note-row-side">
               <div class="note-row-time">{{ formatDate(item.updatedAt) }}</div>
               <div class="note-actions">
+                <el-button text :type="item.starred === 1 ? 'warning' : 'default'" @click.stop="toggleStar(item)">
+                  <el-icon><StarFilled v-if="item.starred === 1" /><Star v-else /></el-icon>
+                </el-button>
+                <el-button text :type="item.pinned === 1 ? 'primary' : 'default'" @click.stop="togglePin(item)">
+                  <el-icon><Top /></el-icon>
+                </el-button>
                 <el-button text type="primary" @click.stop="openDetail(item)">详情</el-button>
                 <el-button text type="primary" @click.stop="editItem(item)">编辑</el-button>
                 <el-button text type="danger" @click.stop="removeItem(item.id)">删除</el-button>
@@ -98,9 +106,13 @@
 
         <template v-if="selected">
           <div class="preview-body">
-            <div class="preview-title">{{ selected.title }}</div>
+            <div class="preview-title">
+              <el-icon v-if="selected.pinned === 1" class="pin-icon" style="margin-right: 6px;"><Top /></el-icon>
+              {{ selected.title }}
+            </div>
             <div class="preview-tags">
               <el-tag effect="dark">{{ selected.category || '未分类' }}</el-tag>
+              <el-tag v-if="selected.contentType === 'markdown'" type="warning" effect="plain">Markdown</el-tag>
               <el-tag
                 v-for="tag in splitTags(selected.tags)"
                 :key="tag"
@@ -111,7 +123,8 @@
               </el-tag>
             </div>
             <div class="page-subtitle">{{ selected.summary || '暂无摘要' }}</div>
-            <div class="preview-content ql-editor scrollbar-hidden" v-html="selected.content || '<p>暂无内容</p>'"></div>
+            <div v-if="selected.contentType === 'markdown'" class="preview-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(selected.content || '')"></div>
+            <div v-else class="preview-content ql-editor scrollbar-hidden" v-html="selected.content || '<p>暂无内容</p>'"></div>
           </div>
         </template>
         <el-empty v-else description="请选择一条笔记" />
@@ -131,6 +144,7 @@
       <template v-if="detailItem">
         <div class="detail-meta">
           <el-tag effect="dark">{{ detailItem.category || '未分类' }}</el-tag>
+          <el-tag v-if="detailItem.contentType === 'markdown'" type="warning" effect="plain">Markdown</el-tag>
           <el-tag
             v-for="tag in splitTags(detailItem.tags)"
             :key="tag"
@@ -142,18 +156,35 @@
           <span class="detail-time">更新于 {{ formatDate(detailItem.updatedAt) }}</span>
         </div>
         <div v-if="detailItem.summary" class="detail-summary">{{ detailItem.summary }}</div>
-        <div class="detail-content ql-editor scrollbar-hidden" v-html="detailItem.content || '<p>暂无内容</p>'"></div>
+        <div v-if="detailItem.contentType === 'markdown'" class="detail-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(detailItem.content || '')"></div>
+        <div v-else class="detail-content ql-editor scrollbar-hidden" v-html="detailItem.content || '<p>暂无内容</p>'"></div>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑笔记' : '新建笔记'" width="900px">
+    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑笔记' : '新建笔记'" width="960px">
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <div class="toolbar-row">
           <el-form-item label="标题" prop="title" style="flex: 1;">
             <el-input v-model="form.title" placeholder="输入笔记标题" />
           </el-form-item>
-          <el-form-item label="分类" style="width: 180px;">
+          <el-form-item label="分类" style="width: 160px;">
             <el-input v-model="form.category" placeholder="例如：项目复盘" />
+          </el-form-item>
+          <el-form-item label="编辑模式" style="width: 160px;">
+            <el-select v-model="form.contentType" style="width: 100%;">
+              <el-option label="富文本" value="html" />
+              <el-option label="Markdown" value="markdown" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="!form.id" label="使用模板" style="width: 160px;">
+            <el-select v-model="selectedTemplateId" clearable placeholder="选择模板" style="width: 100%;" @change="onTemplateChange">
+              <el-option
+                v-for="tpl in templates"
+                :key="tpl.id"
+                :label="tpl.name"
+                :value="tpl.id"
+              />
+            </el-select>
           </el-form-item>
         </div>
 
@@ -167,7 +198,11 @@
         </div>
 
         <el-form-item label="内容" prop="content">
-          <div class="section-card editor-card" style="width: 100%;">
+          <MarkdownEditor
+            v-if="form.contentType === 'markdown'"
+            v-model="form.content"
+          />
+          <div v-else class="section-card editor-card" style="width: 100%;">
             <QuillEditor v-model:content="form.content" content-type="html" toolbar="full" theme="snow" />
           </div>
         </el-form-item>
@@ -186,9 +221,31 @@ import { onMounted, reactive, ref } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuillEditor } from '@vueup/vue-quill'
+import { Top, Star, StarFilled } from '@element-plus/icons-vue'
+import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
 import { noteApi } from '@/api/note'
+import MarkdownEditor from './MarkdownEditor.vue'
 
 const NOTE_ORDER_KEY = 'note-font:notes-order'
+
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+  highlight(str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return `<pre class="hljs-code-block"><code class="hljs language-${lang}">${hljs.highlight(str, { language: lang }).value}</code></pre>`
+      } catch (_) {}
+    }
+    return `<pre class="hljs-code-block"><code class="hljs">${md.utils.escapeHtml(str)}</code></pre>`
+  }
+})
+
+function renderMarkdown(content) {
+  return md.render(content || '')
+}
 
 const formRef = ref()
 const dialogVisible = ref(false)
@@ -197,6 +254,8 @@ const submitting = ref(false)
 const selected = ref(null)
 const detailItem = ref(null)
 const tableData = ref([])
+const templates = ref([])
+const selectedTemplateId = ref(null)
 const dragState = reactive({ id: null, overIndex: -1 })
 const pagination = reactive({ current: 1, size: 8, total: 0 })
 const query = reactive({ keyword: '', category: '', tag: '' })
@@ -207,7 +266,8 @@ const form = reactive({
   category: '',
   tags: '',
   summary: '',
-  content: ''
+  content: '',
+  contentType: 'html'
 })
 
 const rules = {
@@ -268,11 +328,30 @@ function syncSelected() {
 }
 
 function resetForm() {
-  Object.assign(form, { id: null, title: '', category: '', tags: '', summary: '', content: '' })
+  Object.assign(form, { id: null, title: '', category: '', tags: '', summary: '', content: '', contentType: 'html' })
+  selectedTemplateId.value = null
+}
+
+async function loadTemplates() {
+  try {
+    templates.value = await noteApi.listTemplates()
+  } catch {
+    templates.value = []
+  }
+}
+
+function onTemplateChange(tplId) {
+  if (!tplId) return
+  const tpl = templates.value.find((t) => t.id === tplId)
+  if (tpl) {
+    form.content = tpl.content
+    form.contentType = tpl.contentType || 'markdown'
+  }
 }
 
 function openCreate() {
   resetForm()
+  loadTemplates()
   dialogVisible.value = true
 }
 
@@ -282,7 +361,15 @@ function openDetail(item) {
 }
 
 function editItem(row) {
-  Object.assign(form, row)
+  Object.assign(form, {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    tags: row.tags,
+    summary: row.summary,
+    content: row.content,
+    contentType: row.contentType || 'html'
+  })
   detailVisible.value = false
   dialogVisible.value = true
 }
@@ -344,12 +431,16 @@ async function submit() {
       category: form.category,
       tags: form.tags,
       summary: form.summary,
-      content: form.content
+      content: form.content,
+      contentType: form.contentType
     }
     if (form.id) {
       await noteApi.updateNote(form.id, payload)
       ElMessage.success('笔记更新成功')
     } else {
+      if (selectedTemplateId.value) {
+        payload.templateId = selectedTemplateId.value
+      }
       await noteApi.createNote(payload)
       ElMessage.success('笔记创建成功')
     }
@@ -360,10 +451,20 @@ async function submit() {
   }
 }
 
+async function togglePin(item) {
+  await noteApi.togglePin(item.id)
+  await loadData()
+}
+
+async function toggleStar(item) {
+  await noteApi.toggleStar(item.id)
+  await loadData()
+}
+
 async function removeItem(id) {
-  await ElMessageBox.confirm('确定删除这条笔记吗？', '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm('删除后将移至回收站，确定删除吗？', '删除确认', { type: 'warning' })
   await noteApi.deleteNote(id)
-  ElMessage.success('删除成功')
+  ElMessage.success('已移至回收站')
   if (detailItem.value?.id === id) {
     detailVisible.value = false
     detailItem.value = null
@@ -468,6 +569,10 @@ onMounted(loadData)
   box-shadow: 0 18px 34px color-mix(in srgb, var(--app-accent-2) 18%, transparent);
 }
 
+.note-row.pinned {
+  border-left: 3px solid var(--el-color-primary);
+}
+
 .note-row.dragging {
   opacity: 0.68;
 }
@@ -491,6 +596,12 @@ onMounted(loadData)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.pin-icon {
+  color: var(--el-color-primary);
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .note-row-title {
@@ -585,6 +696,8 @@ onMounted(loadData)
   line-height: 1.25;
   margin-top: 0;
   padding-right: 72px;
+  display: flex;
+  align-items: center;
 }
 
 .preview-tags {
@@ -640,6 +753,121 @@ onMounted(loadData)
   overflow: auto;
   padding-right: 10px;
   line-height: 1.9;
+}
+
+.md-preview-body :deep(h1) {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--el-border-color-lighter);
+}
+
+.md-preview-body :deep(h2) {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.md-preview-body :deep(h3) {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.md-preview-body :deep(p) {
+  margin: 0 0 10px;
+}
+
+.md-preview-body :deep(ul),
+.md-preview-body :deep(ol) {
+  padding-left: 24px;
+  margin: 0 0 10px;
+}
+
+.md-preview-body :deep(li) {
+  margin-bottom: 4px;
+}
+
+.md-preview-body :deep(blockquote) {
+  margin: 10px 0;
+  padding: 8px 16px;
+  border-left: 4px solid var(--el-color-primary-light-3);
+  background: var(--el-fill-color-lighter);
+  border-radius: 0 8px 8px 0;
+  color: var(--el-text-color-regular);
+}
+
+.md-preview-body :deep(pre.hljs-code-block) {
+  margin: 10px 0;
+  padding: 14px 18px;
+  background: #1e1e2e;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.md-preview-body :deep(pre.hljs-code-block code) {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #cdd6f4;
+}
+
+.md-preview-body :deep(code) {
+  padding: 2px 6px;
+  background: var(--el-fill-color);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+.md-preview-body :deep(pre code) {
+  padding: 0;
+  background: none;
+}
+
+.md-preview-body :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.md-preview-body :deep(th),
+.md-preview-body :deep(td) {
+  border: 1px solid var(--el-border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.md-preview-body :deep(th) {
+  background: var(--el-fill-color-lighter);
+  font-weight: 700;
+}
+
+.md-preview-body :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--el-border-color-lighter);
+  margin: 20px 0;
+}
+
+.md-preview-body :deep(a) {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.md-preview-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.md-preview-body :deep(input[type="checkbox"]) {
+  margin-right: 6px;
+}
+
+.md-preview-body :deep(img) {
+  max-width: 100%;
+  border-radius: 8px;
 }
 
 @media (max-width: 1280px) {

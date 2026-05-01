@@ -100,9 +100,18 @@ money-cloud/sql/note.sql
 
 我已经同步执行过 `money_cloud_note` 的新结构迁移，当前包含：
 
-- `note`
+- `note`（含软删除字段 `deleted`、`deleted_at`，内容类型 `content_type`，置顶 `pinned`，收藏 `starred`）
 - `vault_item`
 - `todo_item`
+- `activity_log`（活动日志）
+- `note_template`（笔记模板）
+
+新数据库部署时需要额外执行增量脚本：
+
+```text
+money-cloud/sql/note_upgrade_20260501.sql       # 软删除 + 活动日志表
+money-cloud/sql/note_upgrade_20260501_v2.sql     # 内容类型、置顶、收藏、笔记模板表
+```
 
 ## 7. 当前已接入的服务器地址
 

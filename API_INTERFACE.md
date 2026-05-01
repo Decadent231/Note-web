@@ -116,6 +116,21 @@ Authorization: Bearer <token>
 }
 ```
 
+### 7. 验证密码
+
+- 方法：`POST`
+- 地址：`/user/users/verify-password`
+
+请求参数：
+
+```json
+{
+  "password": "123456"
+}
+```
+
+返回说明：返回 `true` 或 `false`，用于保险箱二次验证等场景
+
 ## 二、笔记模块 `note`
 
 ### 1. 分页查询笔记
@@ -149,19 +164,115 @@ Authorization: Bearer <token>
   "category": "项目管理",
   "tags": "周报,复盘",
   "summary": "本周迭代总结",
-  "content": "<p>富文本内容</p>"
+  "content": "<p>富文本内容</p>",
+  "contentType": "html",
+  "templateId": null
 }
 ```
+
+字段说明：
+
+- `contentType`：内容类型，`html`（富文本，默认）/ `markdown`
+- `templateId`：可选，选择模板时传入，新建笔记将自动填充模板内容
 
 ### 4. 修改笔记
 
 - 方法：`PUT`
 - 地址：`/note/notes/{id}`
 
-### 5. 删除笔记
+### 5. 删除笔记（软删除，移入回收站）
 
 - 方法：`DELETE`
 - 地址：`/note/notes/{id}`
+
+### 6. 查询回收站
+
+- 方法：`GET`
+- 地址：`/note/notes/trash`
+
+### 7. 恢复笔记
+
+- 方法：`PUT`
+- 地址：`/note/notes/{id}/restore`
+
+### 8. 彻底删除笔记
+
+- 方法：`DELETE`
+- 地址：`/note/notes/{id}/permanent`
+
+### 9. 清空回收站
+
+- 方法：`DELETE`
+- 地址：`/note/notes/trash/empty`
+
+### 10. 置顶/取消置顶笔记
+
+- 方法：`PUT`
+- 地址：`/note/notes/{id}/pin`
+
+### 11. 收藏/取消收藏笔记
+
+- 方法：`PUT`
+- 地址：`/note/notes/{id}/star`
+
+### 12. 查询收藏笔记列表
+
+- 方法：`GET`
+- 地址：`/note/notes/starred`
+
+## 二、1 笔记模板
+
+### 1. 查询模板列表
+
+- 方法：`GET`
+- 地址：`/note/templates`
+
+返回说明：返回系统预置模板和当前用户自定义模板
+
+### 2. 查询单个模板
+
+- 方法：`GET`
+- 地址：`/note/templates/{id}`
+
+### 3. 创建模板
+
+- 方法：`POST`
+- 地址：`/note/templates`
+
+请求参数：
+
+```json
+{
+  "name": "我的模板",
+  "contentType": "markdown",
+  "content": "# 模板内容"
+}
+```
+
+### 4. 修改模板
+
+- 方法：`PUT`
+- 地址：`/note/templates/{id}`
+
+说明：系统预置模板不可修改/删除
+
+### 5. 删除模板
+
+- 方法：`DELETE`
+- 地址：`/note/templates/{id}`
+
+## 二、2 全局搜索
+
+### 1. 全局搜索
+
+- 方法：`GET`
+- 地址：`/note/search`
+
+查询参数：
+
+- `keyword`：搜索关键词
+
+返回说明：按笔记、保险箱、待办三个分类返回匹配结果，每类最多 6 条
 
 ## 三、密码保险箱
 
@@ -219,6 +330,8 @@ Authorization: Bearer <token>
 
 - `status`
 - `priority`
+- `keyword`：关键词，搜索标题和描述
+- `reminderFilter`：提醒状态筛选，`active`（未过期）/ `expired`（已过期）
 
 ### 2. 查询单条待办
 
@@ -281,3 +394,42 @@ Authorization: Bearer <token>
 - 待办提醒由 `note` 服务定时任务每分钟扫描一次。
 - 只有 `reminderEnabled = true`、`reminderSent = false` 且 `reminderAt <= 当前时间` 的待办会触发发送。
 - 提醒邮件发送成功后，后端会把 `reminderSent` 更新为 `true`，避免重复发送。
+
+## 六、活动日志
+
+### 1. 查询活动日志
+
+- 方法：`GET`
+- 地址：`/note/activity-logs`
+
+查询参数：
+
+- `module`：模块筛选，`note / vault / todo`，可选
+- `limit`：返回条数，默认 `30`
+
+### 2. 查询最近活动
+
+- 方法：`GET`
+- 地址：`/note/activity-logs/recent`
+
+查询参数：
+
+- `limit`：返回条数，默认 `10`
+
+### 3. 模块操作统计
+
+- 方法：`GET`
+- 地址：`/note/activity-logs/stats/modules`
+
+返回说明：返回各模块操作次数，格式 `{ "note": 12, "vault": 5, "todo": 8 }`
+
+### 4. 按天操作统计
+
+- 方法：`GET`
+- 地址：`/note/activity-logs/stats/daily`
+
+查询参数：
+
+- `days`：统计天数，默认 `14`
+
+返回说明：返回按日期的操作次数，格式 `{ "2026-05-01": 5, "2026-04-30": 3 }`

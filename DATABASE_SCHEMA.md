@@ -41,6 +41,11 @@
 - `tags`：标签，逗号分隔
 - `summary`：摘要
 - `content`：富文本 HTML 内容
+- `content_type`：内容类型，`html`（富文本）/ `markdown`（Markdown）
+- `pinned`：是否置顶，0=否，1=是
+- `starred`：是否收藏，0=否，1=是
+- `deleted`：是否在回收站，0=正常，1=已删除
+- `deleted_at`：移入回收站的时间
 - `created_at`：创建时间
 - `updated_at`：更新时间
 
@@ -89,5 +94,45 @@
 ## 3. 说明
 
 - 当前前端所有业务数据都通过后端 API 访问，不会在浏览器直接连接数据库。
-- “自动适配表结构”的实际方式，是后端实体、SQL 脚本和线上数据库保持一致。
+- "自动适配表结构"的实际方式，是后端实体、SQL 脚本和线上数据库保持一致。
 - 这次已经为 `todo_item` 补齐提醒相关字段，并在数据库中创建提醒查询索引。
+
+## 4. 活动日志表 `activity_log`
+
+用途：记录用户对笔记、保险箱、待办的操作历史，用于 Dashboard 统计和操作审计。
+
+字段：
+
+- `id`：主键
+- `user_id`：所属用户
+- `module`：模块名，`note / vault / todo`
+- `action`：动作，`create / update / delete / restore / export`
+- `target_id`：目标记录 ID
+- `detail`：补充说明（如标题、状态变更等）
+- `created_at`：创建时间
+
+索引：
+
+- `idx_activity_user_created`：按用户+时间查询
+- `idx_activity_user_module`：按用户+模块筛选
+
+## 5. 笔记模板表 `note_template`
+
+用途：存储系统预置和用户自定义的笔记模板，新建笔记时可选择模板快速填充内容。
+
+字段：
+
+- `id`：主键
+- `user_id`：所属用户（系统模板为 NULL 或固定值）
+- `name`：模板名称
+- `content_type`：内容类型，`html` / `markdown`
+- `content`：模板内容
+- `is_system`：是否系统预置，1=系统模板，0=用户自定义
+- `created_at`：创建时间
+- `updated_at`：更新时间
+
+说明：
+
+- 系统预置了 6 个模板：周报、会议纪要、日报、需求分析、Bug记录、读书笔记
+- 系统模板对所有用户可见，不可修改/删除
+- 用户自定义模板仅对自己可见，可自由增删改

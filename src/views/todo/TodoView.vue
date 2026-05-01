@@ -3,13 +3,20 @@
     <div class="toolbar-row header-row">
       <div>
         <h1 class="page-title">待办事项</h1>
-        <p class="page-subtitle">支持分栏拖动排序，拖到其他列时会同步更新状态。</p>
+        <p class="page-subtitle">支持看板拖拽、列表视图切换，拖到其他列时会同步更新状态。</p>
       </div>
-      <el-button type="primary" size="large" @click="openCreate">新建待办</el-button>
+      <div class="toolbar-row" style="gap: 10px;">
+        <el-radio-group v-model="viewMode" size="default">
+          <el-radio-button value="kanban">看板</el-radio-button>
+          <el-radio-button value="list">列表</el-radio-button>
+        </el-radio-group>
+        <el-button type="primary" size="large" @click="openCreate">新建待办</el-button>
+      </div>
     </div>
 
     <div class="section-card filter-card">
       <div class="toolbar-row">
+        <el-input v-model="query.keyword" placeholder="搜索标题 / 描述" clearable style="max-width: 280px;" />
         <el-select v-model="query.status" clearable placeholder="状态" style="width: 160px;">
           <el-option label="待处理" value="todo" />
           <el-option label="进行中" value="doing" />
@@ -20,69 +27,114 @@
           <el-option label="中" value="medium" />
           <el-option label="高" value="high" />
         </el-select>
+        <el-select v-model="query.reminderFilter" clearable placeholder="提醒状态" style="width: 160px;">
+          <el-option label="未过期" value="active" />
+          <el-option label="已过期" value="expired" />
+        </el-select>
         <el-button @click="loadData">筛选</el-button>
       </div>
     </div>
 
-    <div class="todo-grid">
-      <div
-        v-for="column in columns"
-        :key="column.value"
-        class="section-card todo-column"
-        @dragover.prevent="handleColumnDragOver(column.value)"
-        @drop.prevent="handleColumnDrop(column.value)"
-      >
-        <div class="column-head">
-          <div>
-            <div class="column-title">{{ column.label }}</div>
-            <div class="column-subtitle">拖动卡片调整优先顺序</div>
+    <template v-if="viewMode === 'kanban'">
+      <div class="todo-grid">
+        <div
+          v-for="column in columns"
+          :key="column.value"
+          class="section-card todo-column"
+          @dragover.prevent="handleColumnDragOver(column.value)"
+          @drop.prevent="handleColumnDrop(column.value)"
+        >
+          <div class="column-head">
+            <div>
+              <div class="column-title">{{ column.label }}</div>
+              <div class="column-subtitle">拖动卡片调整优先顺序</div>
+            </div>
+            <el-tag>{{ grouped[column.value].length }}</el-tag>
           </div>
-          <el-tag>{{ grouped[column.value].length }}</el-tag>
-        </div>
 
-        <div class="todo-list scrollbar-hidden">
-          <div
-            v-for="(item, index) in grouped[column.value]"
-            :key="item.id"
-            class="metric-card todo-card"
-            :class="{ dragging: dragState.id === item.id }"
-            draggable="true"
-            @dragstart="handleDragStart(item)"
-            @dragover.prevent="handleCardDragOver(column.value, index)"
-            @drop.prevent="handleCardDrop(column.value, index)"
-            @dragend="handleDragEnd"
-          >
-            <div class="todo-card-top">
-              <div class="drag-indicator" aria-hidden="true">⋮⋮</div>
-              <div class="todo-title-wrap">
-                <div class="todo-title">{{ item.title }}</div>
-                <div class="todo-meta">截止：{{ item.dueDate || '未设置' }}</div>
+          <div class="todo-list scrollbar-hidden">
+            <div
+              v-for="(item, index) in grouped[column.value]"
+              :key="item.id"
+              class="metric-card todo-card"
+              :class="{ dragging: dragState.id === item.id }"
+              draggable="true"
+              @dragstart="handleDragStart(item)"
+              @dragover.prevent="handleCardDragOver(column.value, index)"
+              @drop.prevent="handleCardDrop(column.value, index)"
+              @dragend="handleDragEnd"
+            >
+              <div class="todo-card-top">
+                <div class="drag-indicator" aria-hidden="true">⋮⋮</div>
+                <div class="todo-title-wrap">
+                  <div class="todo-title">{{ item.title }}</div>
+                  <div class="todo-meta">截止：{{ item.dueDate || '未设置' }}</div>
+                </div>
+                <el-tag :type="priorityType(item.priority)">{{ priorityLabel(item.priority) }}</el-tag>
               </div>
-              <el-tag :type="priorityType(item.priority)">{{ priorityLabel(item.priority) }}</el-tag>
+
+              <div class="page-subtitle todo-description">{{ item.description || '暂无描述' }}</div>
+              <div class="todo-reminder">
+                提醒：{{ item.reminderEnabled ? `${formatDateTime(item.reminderAt)} · ${item.reminderEmail || '默认账号邮箱'}` : '关闭' }}
+              </div>
+
+              <div class="toolbar-row todo-actions">
+                <el-select :model-value="item.status" size="small" style="width: 120px;" @change="changeStatus(item, $event)">
+                  <el-option label="待处理" value="todo" />
+                  <el-option label="进行中" value="doing" />
+                  <el-option label="已完成" value="done" />
+                </el-select>
+                <div>
+                  <el-button text type="primary" @click="editItem(item)">编辑</el-button>
+                  <el-button text type="danger" @click="removeItem(item.id)">删除</el-button>
+                </div>
+              </div>
             </div>
 
-            <div class="page-subtitle todo-description">{{ item.description || '暂无描述' }}</div>
-            <div class="todo-reminder">
-              提醒：{{ item.reminderEnabled ? `${formatDateTime(item.reminderAt)} · ${item.reminderEmail || '默认账号邮箱'}` : '关闭' }}
-            </div>
+            <el-empty v-if="grouped[column.value].length === 0" :description="`暂无${column.label}`" />
+          </div>
+        </div>
+      </div>
+    </template>
 
-            <div class="toolbar-row todo-actions">
-              <el-select :model-value="item.status" size="small" style="width: 120px;" @change="changeStatus(item, $event)">
+    <template v-else>
+      <div class="section-card list-view-card">
+        <div class="list-view-head">
+          <div class="list-view-title">全部待办</div>
+          <el-tag type="info">{{ list.length }}</el-tag>
+        </div>
+        <div class="list-view-items scrollbar-hidden">
+          <div
+            v-for="item in list"
+            :key="item.id"
+            class="list-item"
+            :class="{ 'list-item-done': item.status === 'done' }"
+          >
+            <div class="list-item-status">
+              <el-select :model-value="item.status" size="small" style="width: 100px;" @change="changeStatus(item, $event)">
                 <el-option label="待处理" value="todo" />
                 <el-option label="进行中" value="doing" />
                 <el-option label="已完成" value="done" />
               </el-select>
-              <div>
-                <el-button text type="primary" @click="editItem(item)">编辑</el-button>
-                <el-button text type="danger" @click="removeItem(item.id)">删除</el-button>
+            </div>
+            <div class="list-item-body">
+              <div class="list-item-title">{{ item.title }}</div>
+              <div class="list-item-meta">
+                <el-tag :type="priorityType(item.priority)" size="small" effect="plain">{{ priorityLabel(item.priority) }}</el-tag>
+                <span v-if="item.dueDate" class="list-item-date">截止：{{ item.dueDate }}</span>
+                <span v-if="item.reminderEnabled" class="list-item-reminder">提醒：{{ formatDateTime(item.reminderAt) }}</span>
               </div>
+              <div v-if="item.description" class="list-item-desc">{{ item.description }}</div>
+            </div>
+            <div class="list-item-actions">
+              <el-button text type="primary" @click="editItem(item)">编辑</el-button>
+              <el-button text type="danger" @click="removeItem(item.id)">删除</el-button>
             </div>
           </div>
-
-          <el-empty v-if="grouped[column.value].length === 0" :description="`暂无${column.label}`" />
+          <el-empty v-if="list.length === 0" description="暂无待办" />
         </div>
       </div>
-    </div>
+    </template>
 
     <el-dialog v-model="dialogVisible" :title="form.id ? '编辑待办' : '新建待办'" width="760px">
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
@@ -154,6 +206,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { noteApi } from '@/api/note'
 
 const TODO_ORDER_KEY = 'note-font:todo-order'
+const viewMode = ref('kanban')
 
 const columns = [
   { label: '待处理', value: 'todo' },
@@ -165,7 +218,7 @@ const formRef = ref()
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const list = ref([])
-const query = reactive({ status: '', priority: '' })
+const query = reactive({ status: '', priority: '', keyword: '', reminderFilter: '' })
 const dragState = reactive({
   id: null,
   fromStatus: '',
@@ -226,6 +279,9 @@ function sortBySavedOrder(records) {
   const saved = readOrder()
   return columns.flatMap((column) => {
     const items = records.filter((item) => item.status === column.value)
+    if (column.value === 'done') {
+      return [...items].sort((a, b) => dayjs(b.updatedAt).valueOf() - dayjs(a.updatedAt).valueOf())
+    }
     const order = saved[column.value] || []
     const orderMap = new Map(order.map((id, index) => [id, index]))
     return [...items].sort((a, b) => {
@@ -565,5 +621,110 @@ onMounted(loadData)
   .todo-list {
     overflow: visible;
   }
+}
+
+.list-view-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+
+.list-view-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.list-view-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.list-view-items {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--app-panel-strong) 88%, transparent), var(--app-panel));
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.list-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.list-item-done {
+  opacity: 0.6;
+}
+
+.list-item-status {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.list-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-item-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--el-text-color-primary);
+}
+
+.list-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.list-item-date,
+.list-item-reminder {
+  white-space: nowrap;
+}
+
+.list-item-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-item-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 2px;
+}
+
+html.dark .list-item {
+  background: linear-gradient(155deg, rgba(20, 31, 46, 0.96), rgba(12, 20, 31, 0.9));
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+}
+
+html.dark .list-item:hover {
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.3);
 }
 </style>
