@@ -433,3 +433,153 @@ Authorization: Bearer <token>
 - `days`：统计天数，默认 `14`
 
 返回说明：返回按日期的操作次数，格式 `{ "2026-05-01": 5, "2026-04-30": 3 }`
+
+## 七、日历日程
+
+### 1. 查询日程列表（按月）
+
+- 方法：`GET`
+- 地址：`/note/calendar`
+
+查询参数：
+
+- `year`：年份，必填
+- `month`：月份，必填
+
+### 2. 查询日程（按日期范围）
+
+- 方法：`GET`
+- 地址：`/note/calendar/range`
+
+查询参数：
+
+- `startDate`：开始日期，格式 `yyyy-MM-dd`
+- `endDate`：结束日期，格式 `yyyy-MM-dd`
+
+### 3. 查询今日日程
+
+- 方法：`GET`
+- 地址：`/note/calendar/today`
+
+### 4. 查询单条日程
+
+- 方法：`GET`
+- 地址：`/note/calendar/{id}`
+
+### 5. 新建日程
+
+- 方法：`POST`
+- 地址：`/note/calendar`
+
+请求参数：
+
+```json
+{
+  "title": "团队周会",
+  "description": "本周迭代回顾",
+  "startTime": "2026-05-05T10:00:00",
+  "endTime": "2026-05-05T11:00:00",
+  "allDay": 0,
+  "color": "#409eff",
+  "location": "会议室A",
+  "reminderMinutes": 15
+}
+```
+
+### 6. 修改日程
+
+- 方法：`PUT`
+- 地址：`/note/calendar/{id}`
+
+请求参数与新建一致。
+
+### 7. 删除日程
+
+- 方法：`DELETE`
+- 地址：`/note/calendar/{id}`
+
+## 八、知识库 Wiki
+
+### 1. 查询知识库列表
+
+- 方法：`GET`
+- 地址：`/note/wiki/spaces`
+
+### 2. 查询单个知识库
+
+- 方法：`GET`
+- 地址：`/note/wiki/spaces/{id}`
+
+### 3. 新建知识库
+
+- 方法：`POST`
+- 地址：`/note/wiki/spaces`
+
+请求参数：
+
+```json
+{
+  "name": "技术笔记",
+  "description": "日常开发知识积累",
+  "icon": "💻"
+}
+```
+
+### 4. 修改知识库
+
+- 方法：`PUT`
+- 地址：`/note/wiki/spaces/{id}`
+
+请求参数与新建一致。
+
+### 5. 删除知识库
+
+- 方法：`DELETE`
+- 地址：`/note/wiki/spaces/{id}`
+
+说明：删除知识库会同时删除其中所有页面。
+
+### 6. 查询知识库下所有页面（平铺）
+
+- 方法：`GET`
+- 地址：`/note/wiki/spaces/{spaceId}/pages`
+
+### 7. 查询知识库页面树
+
+- 方法：`GET`
+- 地址：`/note/wiki/spaces/{spaceId}/tree`
+
+返回说明：返回树形结构，每个节点包含 `id`、`title`、`parentId`、`children` 数组。
+
+### 8. 查询单个页面
+
+- 方法：`GET`
+- 地址：`/note/wiki/pages/{id}`
+
+### 9. 新建页面
+
+- 方法：`POST`
+- 地址：`/note/wiki/pages`
+
+请求参数：
+
+```json
+{
+  "spaceId": 1,
+  "parentId": null,
+  "title": "Java 并发编程",
+  "content": "# 并发编程\n\n## 线程池..."
+}
+```
+
+### 10. 修改页面
+
+- 方法：`PUT`
+- 地址：`/note/wiki/pages/{id}`
+
+### 11. 删除页面
+
+- 方法：`DELETE`
+- 地址：`/note/wiki/pages/{id}`
+
+说明：删除页面会同时删除所有子页面。

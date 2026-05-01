@@ -40,5 +40,29 @@ export const noteApi = {
   activityModuleStats: () => http.get('/note/activity-logs/stats/modules'),
   activityDailyStats: (params) => http.get('/note/activity-logs/stats/daily', { params }),
 
-  globalSearch: (keyword) => http.get('/note/search', { params: { keyword } })
+  globalSearch: (keyword) => http.get('/note/search', { params: { keyword } }),
+
+  // Calendar
+  createEvent: (payload) => http.post('/note/calendar', payload),
+  updateEvent: (id, payload) => http.put(`/note/calendar/${id}`, payload),
+  deleteEvent: (id) => http.delete(`/note/calendar/${id}`),
+  getEvent: (id) => http.get(`/note/calendar/${id}`),
+  listEventsByMonth: (year, month) => http.get('/note/calendar', { params: { year, month } }),
+  listEventsByRange: (startDate, endDate) => http.get('/note/calendar/range', { params: { startDate, endDate } }),
+  listEventsToday: () => http.get('/note/calendar/today'),
+
+  // Wiki Spaces
+  createWikiSpace: (payload) => http.post('/note/wiki/spaces', payload),
+  updateWikiSpace: (id, payload) => http.put(`/note/wiki/spaces/${id}`, payload),
+  deleteWikiSpace: (id) => http.delete(`/note/wiki/spaces/${id}`),
+  listWikiSpaces: () => http.get('/note/wiki/spaces'),
+  getWikiSpace: (id) => http.get(`/note/wiki/spaces/${id}`),
+
+  // Wiki Pages
+  createWikiPage: (payload) => http.post('/note/wiki/pages', payload),
+  updateWikiPage: (id, payload) => http.put(`/note/wiki/pages/${id}`, payload),
+  deleteWikiPage: (id) => http.delete(`/note/wiki/pages/${id}`),
+  getWikiPage: (id) => http.get(`/note/wiki/pages/${id}`),
+  listWikiPages: (spaceId) => http.get(`/note/wiki/spaces/${spaceId}/pages`),
+  getWikiPageTree: (spaceId) => http.get(`/note/wiki/spaces/${spaceId}/tree`)
 }

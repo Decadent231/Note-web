@@ -13,6 +13,9 @@ const routes = [
       { path: 'vault', name: 'vault', component: () => import('@/views/vault/VaultView.vue'), meta: { title: '密码保险箱' } },
       { path: 'todos', name: 'todos', component: () => import('@/views/todo/TodoView.vue'), meta: { title: '待办事项' } },
       { path: 'trash', name: 'trash', component: () => import('@/views/trash/TrashView.vue'), meta: { title: '回收站' } },
+      { path: 'calendar', name: 'calendar', component: () => import('@/views/calendar/CalendarView.vue'), meta: { title: '日程日历' } },
+      { path: 'wiki', name: 'wiki', component: () => import('@/views/wiki/WikiView.vue'), meta: { title: '知识库' } },
+      { path: 'wiki/:spaceId', name: 'wiki-space', component: () => import('@/views/wiki/WikiView.vue'), meta: { title: '知识库' } },
       { path: 'activity', name: 'activity', component: () => import('@/views/activity/ActivityView.vue'), meta: { title: '操作日志' } },
       { path: 'profile', name: 'profile', component: () => import('@/views/profile/ProfileView.vue'), meta: { title: '个人中心' } }
     ]

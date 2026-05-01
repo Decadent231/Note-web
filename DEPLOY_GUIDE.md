@@ -105,12 +105,16 @@ money-cloud/sql/note.sql
 - `todo_item`
 - `activity_log`（活动日志）
 - `note_template`（笔记模板）
+- `calendar_event`（日历日程）
+- `wiki_space`（知识库空间）
+- `wiki_page`（知识库页面）
 
 新数据库部署时需要额外执行增量脚本：
 
 ```text
 money-cloud/sql/note_upgrade_20260501.sql       # 软删除 + 活动日志表
 money-cloud/sql/note_upgrade_20260501_v2.sql     # 内容类型、置顶、收藏、笔记模板表
+money-cloud/sql/note_upgrade_20260501_v3.sql     # 日历日程表、知识库空间表、知识库页面表
 ```
 
 ## 7. 当前已接入的服务器地址

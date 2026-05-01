@@ -136,3 +136,68 @@
 - 系统预置了 6 个模板：周报、会议纪要、日报、需求分析、Bug记录、读书笔记
 - 系统模板对所有用户可见，不可修改/删除
 - 用户自定义模板仅对自己可见，可自由增删改
+
+## 6. 日历日程表 `calendar_event`
+
+用途：存储用户创建的日程事件，支持月视图/周视图查询、全天事件、颜色标签、地点。
+
+字段：
+
+- `id`：主键
+- `user_id`：所属用户
+- `title`：事件标题
+- `description`：事件描述，可为空
+- `start_time`：开始时间
+- `end_time`：结束时间，可为空
+- `all_day`：是否全天事件，1=是，0=否
+- `color`：颜色标签，如 `#409eff`
+- `location`：地点，可为空
+- `reminder_minutes`：提前提醒分钟数，可为空
+- `todo_item_id`：关联的待办 ID，可为空
+- `created_at`：创建时间
+- `updated_at`：更新时间
+
+索引：
+
+- `idx_event_user_time`：按用户+时间查询
+- `idx_event_user_created`：按用户+创建时间排序
+
+## 7. 知识库空间表 `wiki_space`
+
+用途：知识库空间，一个用户可以有多个知识库空间。
+
+字段：
+
+- `id`：主键
+- `user_id`：所属用户
+- `name`：知识库名称
+- `description`：描述，可为空
+- `icon`：图标（emoji），默认 📋
+- `created_at`：创建时间
+- `updated_at`：更新时间
+
+索引：
+
+- `idx_space_user`：按用户查询
+
+## 8. 知识库页面表 `wiki_page`
+
+用途：知识库中的页面，支持无限层级树形结构。
+
+字段：
+
+- `id`：主键
+- `user_id`：所属用户
+- `space_id`：所属知识库空间
+- `parent_id`：父页面 ID，NULL 表示顶级页面
+- `title`：页面标题
+- `content`：页面内容（长文本）
+- `sort_order`：排序字段
+- `created_at`：创建时间
+- `updated_at`：更新时间
+
+索引：
+
+- `idx_page_space`：按知识库查询
+- `idx_page_parent`：按父页面查询子节点
+- `idx_page_user_space`：按用户+知识库查询

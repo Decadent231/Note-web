@@ -41,6 +41,14 @@
           <el-icon><Delete /></el-icon>
           <span>回收站</span>
         </el-menu-item>
+        <el-menu-item index="/calendar">
+          <el-icon><Calendar /></el-icon>
+          <span>日程日历</span>
+        </el-menu-item>
+        <el-menu-item index="/wiki">
+          <el-icon><Collection /></el-icon>
+          <span>知识库</span>
+        </el-menu-item>
         <el-menu-item index="/activity">
           <el-icon><Timer /></el-icon>
           <span>操作日志</span>
@@ -77,7 +85,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search } from '@element-plus/icons-vue'
+import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search, Calendar, Collection } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import GlobalSearch from '@/components/GlobalSearch.vue'
