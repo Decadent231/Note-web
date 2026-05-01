@@ -222,8 +222,8 @@ function formatDate(val) {
 }
 
 async function loadSpaces() {
-  const { data } = await noteApi.listWikiSpaces()
-  spaces.value = data || []
+  const res = await noteApi.listWikiSpaces()
+  spaces.value = res || []
 }
 
 async function enterSpace(space) {
@@ -240,10 +240,10 @@ function exitSpace() {
 
 async function loadTree() {
   if (!currentSpace.value) return
-  const { data } = await noteApi.getWikiPageTree(currentSpace.value.id)
-  pageTree.value = data || []
-  const { data: flat } = await noteApi.listWikiPages(currentSpace.value.id)
-  flatPages.value = flat || []
+  const treeRes = await noteApi.getWikiPageTree(currentSpace.value.id)
+  pageTree.value = treeRes || []
+  const flatRes = await noteApi.listWikiPages(currentSpace.value.id)
+  flatPages.value = flatRes || []
 }
 
 function toggleExpand(id) {
@@ -251,10 +251,10 @@ function toggleExpand(id) {
 }
 
 async function loadPage(id) {
-  const { data } = await noteApi.getWikiPage(id)
-  currentPage.value = data
-  editTitle.value = data.title
-  editContent.value = data.content || ''
+  const res = await noteApi.getWikiPage(id)
+  currentPage.value = res
+  editTitle.value = res.title
+  editContent.value = res.content || ''
 }
 
 let saveTimer = null
@@ -332,9 +332,9 @@ async function submitPage() {
         editTitle.value = pageForm.title
       }
     } else {
-      const { data } = await noteApi.createWikiPage(payload)
+      const res = await noteApi.createWikiPage(payload)
       ElMessage.success('已创建')
-      await loadPage(data.id)
+      await loadPage(res.id)
     }
     pageDialogVisible.value = false
     await loadTree()

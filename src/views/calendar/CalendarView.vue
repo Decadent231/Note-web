@@ -97,6 +97,9 @@
           <div v-if="detailEvent.endTime" class="event-detail-row">结束：{{ formatDateTime(detailEvent.endTime) }}</div>
           <div v-if="detailEvent.location" class="event-detail-row">📍 {{ detailEvent.location }}</div>
           <div v-if="detailEvent.description" class="event-detail-desc">{{ detailEvent.description }}</div>
+          <div v-if="detailEvent.todoItemId" class="event-detail-row">
+            <el-tag type="success" size="small">关联待办：{{ getLinkedTodoTitle(detailEvent.todoItemId) }}</el-tag>
+          </div>
         </div>
       </template>
       <template #footer>
@@ -134,6 +137,11 @@
         <el-form-item label="地点">
           <el-input v-model="form.location" placeholder="可选" />
         </el-form-item>
+        <el-form-item label="关联待办">
+          <el-select v-model="form.todoItemId" clearable placeholder="可选，关联待办事项" style="width: 100%;">
+            <el-option v-for="t in todoList" :key="t.id" :label="t.title" :value="t.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="可选" />
         </el-form-item>
@@ -165,10 +173,11 @@ const detailVisible = ref(false)
 const detailEvent = ref(null)
 const submitting = ref(false)
 const formRef = ref(null)
+const todoList = ref([])
 
 const colorOptions = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#9b59b6', '#1abc9c']
 
-const defaultForm = () => ({ id: null, title: '', startTime: null, endTime: null, allDay: 0, color: null, location: '', description: '' })
+const defaultForm = () => ({ id: null, title: '', startTime: null, endTime: null, allDay: 0, color: null, location: '', description: '', todoItemId: null })
 const form = reactive(defaultForm())
 const rules = { title: [{ required: true, message: '请输入标题', trigger: 'blur' }], startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }] }
 
@@ -176,9 +185,14 @@ function formatDateTime(val) {
   return val ? dayjs(val).format('YYYY-MM-DD HH:mm') : ''
 }
 
+function getLinkedTodoTitle(todoId) {
+  const t = todoList.value.find((i) => i.id === todoId)
+  return t ? t.title : `待办#${todoId}`
+}
+
 async function loadEvents() {
-  const { data } = await noteApi.listEventsByMonth(year.value, month.value)
-  events.value = data || []
+  const res = await noteApi.listEventsByMonth(year.value, month.value)
+  events.value = res || []
 }
 
 function getEventsForDate(dateStr) {
@@ -234,7 +248,11 @@ function goToday() {
 }
 
 watch([year, month], loadEvents)
-onMounted(loadEvents)
+onMounted(async () => {
+  await loadEvents()
+  const res = await noteApi.listTodos({})
+  todoList.value = (res || []).filter((t) => t.status !== 'done')
+})
 
 function openCreate(dateStr) {
   Object.assign(form, defaultForm())
@@ -259,7 +277,8 @@ function openEdit(ev) {
     allDay: ev.allDay || 0,
     color: ev.color,
     location: ev.location || '',
-    description: ev.description || ''
+    description: ev.description || '',
+    todoItemId: ev.todoItemId || null
   })
   detailVisible.value = false
   dialogVisible.value = true
@@ -276,7 +295,8 @@ async function submit() {
       allDay: form.allDay,
       color: form.color,
       location: form.location || null,
-      description: form.description || null
+      description: form.description || null,
+      todoItemId: form.todoItemId || null
     }
     if (form.id) {
       await noteApi.updateEvent(form.id, payload)

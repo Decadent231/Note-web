@@ -54,7 +54,9 @@
               <el-tag size="small" :type="priorityType(item.priority)">{{ priorityLabel(item.priority) }}</el-tag>
             </div>
             <div class="today-meta">
-              截止：{{ item.dueDate || '未设置' }} · 状态：{{ statusLabel(item.status) }}
+              <template v-if="item.dueDate">截止：{{ item.dueDate }} · </template>
+              <template v-if="item.reminderEnabled && item.reminderAt">提醒：{{ dayjs(item.reminderAt).format('MM-DD HH:mm') }} · </template>
+              状态：{{ statusLabel(item.status) }}
             </div>
           </div>
           <el-empty v-if="dueTodos.length === 0" description="今日无待办提醒" :image-size="60" />
@@ -130,7 +132,14 @@ const todoCompletion = computed(() => {
 
 const dueTodos = computed(() => {
   const today = dayjs().format('YYYY-MM-DD')
-  return todoItems.value.filter((i) => i.status !== 'done' && i.dueDate && i.dueDate <= today).slice(0, 8)
+  return todoItems.value.filter((i) => {
+    if (i.status === 'done') return false
+    if (i.dueDate && i.dueDate <= today) return true
+    if (i.reminderEnabled && i.reminderAt) {
+      return dayjs(i.reminderAt).format('YYYY-MM-DD') <= today
+    }
+    return false
+  }).slice(0, 8)
 })
 
 const trendOption = computed(() => {
