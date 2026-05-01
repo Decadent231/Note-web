@@ -103,16 +103,29 @@
           <template v-if="currentPage">
             <div class="wiki-editor-head">
               <div class="wiki-editor-title-input">
-                <el-input
-                  v-model="editTitle"
-                  placeholder="页面标题"
-                  size="large"
-                  class="title-input"
-                  @blur="saveTitle"
-                />
+                <template v-if="viewMode === 'edit'">
+                  <el-input
+                    v-model="editTitle"
+                    placeholder="页面标题"
+                    size="large"
+                    class="title-input"
+                    @blur="saveTitle"
+                  />
+                </template>
+                <template v-else>
+                  <div class="preview-title-text">{{ editTitle }}</div>
+                </template>
               </div>
               <div class="toolbar-row" style="gap: 8px;">
-                <el-select v-model="editContentType" size="small" style="width: 110px;" @change="onContentTypeChange">
+                <el-button-group size="small">
+                  <el-button :type="viewMode === 'preview' ? 'primary' : 'default'" @click="viewMode = 'preview'">
+                    <el-icon><View /></el-icon> 详情
+                  </el-button>
+                  <el-button :type="viewMode === 'edit' ? 'primary' : 'default'" @click="viewMode = 'edit'">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-button>
+                </el-button-group>
+                <el-select v-if="viewMode === 'edit'" v-model="editContentType" size="small" style="width: 110px;" @change="onContentTypeChange">
                   <el-option label="Markdown" value="markdown" />
                   <el-option label="富文本" value="html" />
                 </el-select>
@@ -121,20 +134,26 @@
               </div>
             </div>
             <div class="wiki-editor-body">
-              <MarkdownEditor
-                v-if="editContentType === 'markdown'"
-                v-model="editContent"
-                @update:modelValue="debouncedSave"
-              />
-              <div v-else class="section-card" style="width: 100%; flex: 1; min-height: 0; overflow: auto;">
-                <QuillEditor
-                  v-model:content="editContent"
-                  content-type="html"
-                  toolbar="full"
-                  theme="snow"
-                  @update:content="debouncedSave"
+              <template v-if="viewMode === 'preview'">
+                <div v-if="editContentType === 'markdown'" class="wiki-preview md-preview-body" v-html="renderMarkdown(editContent)"></div>
+                <div v-else class="wiki-preview ql-editor" v-html="editContent || '<p>暂无内容</p>'"></div>
+              </template>
+              <template v-else>
+                <MarkdownEditor
+                  v-if="editContentType === 'markdown'"
+                  v-model="editContent"
+                  @update:modelValue="debouncedSave"
                 />
-              </div>
+                <div v-else class="section-card" style="width: 100%; flex: 1; min-height: 0; overflow: auto;">
+                  <QuillEditor
+                    v-model:content="editContent"
+                    content-type="html"
+                    toolbar="full"
+                    theme="snow"
+                    @update:content="debouncedSave"
+                  />
+                </div>
+              </template>
             </div>
           </template>
           <template v-else>
@@ -196,12 +215,32 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, ArrowLeft, ArrowRight, Collection } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowLeft, ArrowRight, Collection, Edit, View } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { noteApi } from '@/api/note'
 import MarkdownEditor from '../notes/MarkdownEditor.vue'
 import { QuillEditor } from '@vueup/vue-quill'
+import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
+
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+  highlight(str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return `<pre class="hljs-code-block"><code class="hljs language-${lang}">${hljs.highlight(str, { language: lang }).value}</code></pre>`
+      } catch (_) {}
+    }
+    return `<pre class="hljs-code-block"><code class="hljs">${md.utils.escapeHtml(str)}</code></pre>`
+  }
+})
+
+function renderMarkdown(content) {
+  return md.render(content || '')
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -214,6 +253,7 @@ const currentPage = ref(null)
 const editTitle = ref('')
 const editContent = ref('')
 const editContentType = ref('markdown')
+const viewMode = ref('preview')
 const expanded = reactive({})
 
 const spaceDialogVisible = ref(false)
@@ -582,6 +622,132 @@ onMounted(async () => {
   min-height: 0;
   padding: 16px 24px;
   overflow: auto;
+}
+
+.preview-title-text {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 4px 0;
+}
+
+.wiki-preview {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  line-height: 1.9;
+  font-size: 15px;
+}
+
+.wiki-preview :deep(h1) {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--el-border-color-lighter);
+}
+
+.wiki-preview :deep(h2) {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 22px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.wiki-preview :deep(h3) {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+
+.wiki-preview :deep(p) {
+  margin: 0 0 12px;
+}
+
+.wiki-preview :deep(ul),
+.wiki-preview :deep(ol) {
+  padding-left: 24px;
+  margin: 0 0 12px;
+}
+
+.wiki-preview :deep(li) {
+  margin-bottom: 4px;
+}
+
+.wiki-preview :deep(blockquote) {
+  margin: 12px 0;
+  padding: 10px 18px;
+  border-left: 4px solid var(--el-color-primary-light-3);
+  background: var(--el-fill-color-lighter);
+  border-radius: 0 8px 8px 0;
+  color: var(--el-text-color-regular);
+}
+
+.wiki-preview :deep(pre.hljs-code-block) {
+  margin: 12px 0;
+  padding: 14px 18px;
+  background: #1e1e2e;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.wiki-preview :deep(pre.hljs-code-block code) {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #cdd6f4;
+}
+
+.wiki-preview :deep(code) {
+  padding: 2px 6px;
+  background: var(--el-fill-color);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+.wiki-preview :deep(pre code) {
+  padding: 0;
+  background: none;
+}
+
+.wiki-preview :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.wiki-preview :deep(th),
+.wiki-preview :deep(td) {
+  border: 1px solid var(--el-border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.wiki-preview :deep(th) {
+  background: var(--el-fill-color-lighter);
+  font-weight: 700;
+}
+
+.wiki-preview :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--el-border-color-lighter);
+  margin: 22px 0;
+}
+
+.wiki-preview :deep(a) {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.wiki-preview :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.wiki-preview :deep(img) {
+  max-width: 100%;
+  border-radius: 8px;
 }
 
 .wiki-editor-empty {
