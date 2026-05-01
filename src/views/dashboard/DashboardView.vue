@@ -512,8 +512,14 @@ onMounted(loadData)
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
+}
+
+@media (max-width: 800px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .report-grid {
