@@ -125,7 +125,7 @@
               </el-tag>
             </div>
             <div class="page-subtitle">{{ selected.summary || '暂无摘要' }}</div>
-            <div v-if="selected.contentType === 'markdown'" class="preview-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(selected.content || '')"></div>
+            <div v-if="selected.contentType === 'markdown'" class="preview-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(selected.content || '')" @click="onPreviewContentClick"></div>
             <div v-else class="preview-content ql-editor scrollbar-hidden" v-html="selected.content || '<p>暂无内容</p>'"></div>
           </div>
         </template>
@@ -173,6 +173,8 @@
           <MarkdownEditor
             v-if="form.contentType === 'markdown'"
             v-model="form.content"
+            :file-map="embedFileMap"
+            @pick-file="openFilePicker('insert')"
           />
           <div v-else class="section-card editor-card" style="width: 100%;">
             <QuillEditor v-model:content="form.content" content-type="html" toolbar="full" theme="snow" />
@@ -185,11 +187,12 @@
               <div v-for="f in linkedFiles" :key="f.id" class="linked-file-chip">
                 <span class="linked-file-name">{{ f.originalName }}</span>
                 <span class="linked-file-size">{{ formatSize(f.fileSize) }}</span>
+                <el-button v-if="form.contentType === 'markdown'" text type="primary" size="small" @click="form.content = insertFileRef(form.content, f.id)">插入</el-button>
                 <el-button text type="danger" size="small" @click="unlinkFile(f)">移除</el-button>
               </div>
             </div>
             <div v-else class="linked-files-empty">暂未关联文件</div>
-            <el-button type="primary" plain size="small" @click="openFilePicker">选择文件</el-button>
+            <el-button type="primary" plain size="small" @click="openFilePicker('link')">选择文件</el-button>
           </div>
         </el-form-item>
       </el-form>
@@ -200,7 +203,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="filePickerVisible" title="选择文件" width="640px" destroy-on-close>
+    <el-dialog v-model="filePickerVisible" :title="filePickerMode === 'insert' ? '插入文件到内容' : '选择文件'" width="640px" destroy-on-close>
       <el-input v-model="filePickerKeyword" placeholder="搜索文件名" clearable @input="debounceLoadFiles" style="margin-bottom: 12px;" />
       <div class="file-picker-list">
         <div
@@ -231,7 +234,7 @@
       </div>
       <template #footer>
         <el-button @click="filePickerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="linkingFiles" @click="confirmLinkFiles">确定关联</el-button>
+        <el-button type="primary" :loading="linkingFiles" @click="confirmLinkFiles">{{ filePickerMode === 'insert' ? '插入' : '确定关联' }}</el-button>
       </template>
     </el-dialog>
 
@@ -260,7 +263,7 @@
           <span class="detail-time">更新于 {{ formatDate(detailItem.updatedAt) }}</span>
         </div>
         <div v-if="detailItem.summary" class="detail-summary">{{ detailItem.summary }}</div>
-        <div v-if="detailItem.contentType === 'markdown'" class="detail-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(detailItem.content || '')"></div>
+        <div v-if="detailItem.contentType === 'markdown'" class="detail-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(detailItem.content || '')" @click="onDetailContentClick"></div>
         <div v-else class="detail-content ql-editor scrollbar-hidden" v-html="detailItem.content || '<p>暂无内容</p>'"></div>
         <div v-if="detailFiles.length" class="detail-files-section">
           <div class="detail-files-title">关联文件</div>
@@ -274,11 +277,22 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="previewVisible" :title="previewFile?.originalName || '文件预览'" width="70%" top="5vh" destroy-on-close>
+      <div v-if="previewFile" class="file-preview-body">
+        <img v-if="previewFile.mimeType?.startsWith('image/')" :src="`${baseURL}/note/files/${previewFile.id}/preview`" class="file-preview-img" />
+        <iframe v-else :src="`${baseURL}/note/files/${previewFile.id}/preview`" class="file-preview-iframe" />
+      </div>
+      <template #footer>
+        <el-button @click="previewVisible = false">关闭</el-button>
+        <el-button type="primary" @click="downloadPreviewFile">下载</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuillEditor } from '@vueup/vue-quill'
@@ -287,11 +301,13 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import { noteApi } from '@/api/note'
 import MarkdownEditor from './MarkdownEditor.vue'
+import { renderFileCards, insertFileRef } from '@/utils/fileEmbed'
+import { storage } from '@/utils/storage'
 
 const NOTE_ORDER_KEY = 'note-font:notes-order'
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   highlight(str, lang) {
@@ -305,7 +321,8 @@ const md = new MarkdownIt({
 })
 
 function renderMarkdown(content) {
-  return md.render(content || '')
+  const raw = md.render(content || '')
+  return renderFileCards(raw, embedFileMap.value)
 }
 
 const formRef = ref()
@@ -333,6 +350,7 @@ const form = reactive({
 
 const linkedFiles = ref([])
 const detailFiles = ref([])
+const filePickerMode = ref('link')
 const filePickerVisible = ref(false)
 const filePickerKeyword = ref('')
 const availableFiles = ref([])
@@ -342,6 +360,15 @@ const filePickerSize = 10
 const linkingFiles = ref(false)
 const pendingLinkFileIds = ref([])
 let filePickerDebounce = null
+
+const baseURL = import.meta.env.VITE_API_BASE || ''
+
+const embedFileMap = computed(() => {
+  const map = new Map()
+  for (const f of linkedFiles.value) map.set(f.id, f)
+  for (const f of detailFiles.value) map.set(f.id, f)
+  return map
+})
 
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
@@ -431,12 +458,6 @@ function openCreate() {
   resetForm()
   loadTemplates()
   dialogVisible.value = true
-}
-
-function openDetail(item) {
-  detailItem.value = item
-  detailFiles.value = []
-  detailVisible.value = true
 }
 
 function editItem(row) {
@@ -613,7 +634,8 @@ function toggleFileSelection(f) {
   }
 }
 
-function openFilePicker() {
+function openFilePicker(mode) {
+  filePickerMode.value = mode || 'link'
   pendingLinkFileIds.value = []
   filePickerKeyword.value = ''
   filePickerCurrent.value = 1
@@ -653,6 +675,18 @@ async function confirmLinkFiles() {
     filePickerVisible.value = false
     return
   }
+  if (filePickerMode.value === 'insert') {
+    for (const fid of pendingLinkFileIds.value) {
+      form.content = insertFileRef(form.content, fid)
+    }
+    const idsToLink = pendingLinkFileIds.value.filter(id => !linkedFiles.value.some(f => f.id === id))
+    if (idsToLink.length && form.id) {
+      await noteApi.linkNoteFiles(form.id, idsToLink)
+      await loadLinkedFiles(form.id)
+    }
+    filePickerVisible.value = false
+    return
+  }
   if (!form.id) {
     ElMessage.warning('请先保存笔记后再关联文件')
     return
@@ -665,6 +699,59 @@ async function confirmLinkFiles() {
     filePickerVisible.value = false
   } finally {
     linkingFiles.value = false
+  }
+}
+
+const previewVisible = ref(false)
+const previewFile = ref(null)
+
+function openDetail(item) {
+  detailItem.value = item
+  detailFiles.value = []
+  detailVisible.value = true
+}
+
+function onDetailContentClick(e) {
+  const btn = e.target.closest('.file-embed-btn')
+  if (!btn) return
+  const fileId = Number(btn.dataset.fileId)
+  const action = btn.dataset.action
+  if (!fileId) return
+  const file = embedFileMap.value.get(fileId)
+  if (action === 'preview') {
+    if (file && file.mimeType && (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf' || file.mimeType.startsWith('text/'))) {
+      previewFile.value = file
+      previewVisible.value = true
+    } else {
+      window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+    }
+  } else if (action === 'download') {
+    window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+  }
+}
+
+function onPreviewContentClick(e) {
+  const btn = e.target.closest('.file-embed-btn')
+  if (!btn) return
+  const fileId = Number(btn.dataset.fileId)
+  const action = btn.dataset.action
+  if (!fileId) return
+  const file = embedFileMap.value.get(fileId)
+  if (action === 'preview') {
+    if (file && file.mimeType && (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf' || file.mimeType.startsWith('text/'))) {
+      previewFile.value = file
+      previewVisible.value = true
+    } else {
+      window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+    }
+  } else if (action === 'download') {
+    window.open(`${baseURL}/note/files/${fileId}/download`, '_blank')
+  }
+}
+
+function downloadPreviewFile() {
+  if (previewFile.value?.id) {
+    window.open(`${baseURL}/note/files/${previewFile.value.id}/download`, '_blank')
   }
 }
 
@@ -1214,5 +1301,113 @@ html.dark .note-row:hover {
 .file-picker-check {
   color: var(--el-color-primary);
   font-size: 18px;
+}
+
+:deep(.file-embed-card) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-lighter);
+  transition: box-shadow 0.2s;
+}
+
+:deep(.file-embed-card:hover) {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+:deep(.file-embed-left) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+:deep(.file-embed-icon) {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+:deep(.file-embed-info) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+:deep(.file-embed-name) {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.file-embed-meta) {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.file-embed-actions) {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+:deep(.file-embed-btn) {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+:deep(.file-embed-btn-preview) {
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary-light-7);
+}
+
+:deep(.file-embed-btn-preview:hover) {
+  background: var(--el-color-primary-light-9);
+}
+
+:deep(.file-embed-btn-download) {
+  color: var(--el-color-success);
+  border-color: var(--el-color-success-light-7);
+}
+
+:deep(.file-embed-btn-download:hover) {
+  background: var(--el-color-success-light-9);
+}
+
+:deep(.file-embed-missing) {
+  color: var(--el-text-color-placeholder);
+  font-style: italic;
+}
+
+.file-preview-body {
+  display: flex;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.file-preview-img {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 8px;
+}
+
+.file-preview-iframe {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  border-radius: 8px;
 }
 </style>

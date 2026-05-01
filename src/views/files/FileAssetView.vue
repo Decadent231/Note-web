@@ -22,6 +22,7 @@
     <div class="section-card" style="padding: 18px; margin-bottom: 18px;">
       <div class="toolbar-row">
         <el-input v-model="query.keyword" placeholder="搜索文件名 / 备注" clearable style="max-width: 260px;" @keyup.enter="loadData" />
+        <el-input v-model="query.linkedTitle" placeholder="按关联笔记/知识库标题搜索" clearable style="max-width: 260px;" @keyup.enter="loadData" />
         <el-select v-model="query.folder" placeholder="文件夹筛选" clearable style="max-width: 200px;" @change="loadData">
           <el-option v-for="f in folders" :key="f" :label="f" :value="f" />
         </el-select>
@@ -205,7 +206,7 @@ const pendingFiles = ref([])
 const uploadFolder = ref('')
 const uploadRemark = ref('')
 
-const query = reactive({ keyword: '', folder: '' })
+const query = reactive({ keyword: '', folder: '', linkedTitle: '' })
 const pagination = reactive({ current: 1, size: 20, total: 0 })
 const editForm = reactive({ id: null, folder: '', remark: '', originalName: '' })
 
@@ -265,6 +266,7 @@ function getFileColor(ext) {
 function resetQuery() {
   query.keyword = ''
   query.folder = ''
+  query.linkedTitle = ''
   pagination.current = 1
   loadData()
 }
@@ -276,7 +278,8 @@ async function loadData() {
       current: pagination.current,
       size: pagination.size,
       keyword: query.keyword || undefined,
-      folder: query.folder || undefined
+      folder: query.folder || undefined,
+      linkedTitle: query.linkedTitle || undefined
     })
     const records = data.records || []
     await Promise.all(records.map(async (r) => {

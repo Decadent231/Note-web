@@ -43,6 +43,11 @@
       <el-tooltip content="链接" placement="top">
         <el-button text @click="insertSyntax('link')">Link</el-button>
       </el-tooltip>
+      <el-tooltip content="插入文件" placement="top">
+        <el-button text @click="$emit('pick-file')">
+          <el-icon><Paperclip /></el-icon>
+        </el-button>
+      </el-tooltip>
       <el-tooltip content="分隔线" placement="top">
         <el-button text @click="insertSyntax('hr')">— HR</el-button>
       </el-tooltip>
@@ -71,19 +76,21 @@
 import { computed, ref } from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
-import { View } from '@element-plus/icons-vue'
+import { View, Paperclip } from '@element-plus/icons-vue'
+import { renderFileCards } from '@/utils/fileEmbed'
 
 const props = defineProps({
-  modelValue: { type: String, default: '' }
+  modelValue: { type: String, default: '' },
+  fileMap: { type: Map, default: () => new Map() }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'pick-file'])
 
 const textareaRef = ref(null)
 const showPreview = ref(true)
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   highlight(str, lang) {
@@ -96,7 +103,10 @@ const md = new MarkdownIt({
   }
 })
 
-const renderedHtml = computed(() => md.render(props.modelValue || ''))
+const renderedHtml = computed(() => {
+  const raw = md.render(props.modelValue || '')
+  return renderFileCards(raw, props.fileMap)
+})
 
 function onInput(e) {
   emit('update:modelValue', e.target.value)
