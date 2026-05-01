@@ -13,7 +13,9 @@
         <el-input v-model="query.keyword" placeholder="搜索标题 / 摘要 / 内容" clearable style="max-width: 280px;" />
         <el-input v-model="query.category" placeholder="分类" clearable style="max-width: 180px;" />
         <el-input v-model="query.tag" placeholder="标签" clearable style="max-width: 180px;" />
-        <el-button @click="loadData">查询</el-button>
+        <el-checkbox v-model="query.starred" @change="loadData">仅收藏</el-checkbox>
+        <el-button @click="resetQuery">重置</el-button>
+        <el-button type="primary" @click="loadData">查询</el-button>
       </div>
     </div>
 
@@ -258,7 +260,7 @@ const templates = ref([])
 const selectedTemplateId = ref(null)
 const dragState = reactive({ id: null, overIndex: -1 })
 const pagination = reactive({ current: 1, size: 8, total: 0 })
-const query = reactive({ keyword: '', category: '', tag: '' })
+const query = reactive({ keyword: '', category: '', tag: '', starred: false })
 
 const form = reactive({
   id: null,
@@ -304,7 +306,10 @@ function sortBySavedOrder(records) {
     return records
   }
   const orderMap = new Map(order.map((id, index) => [id, index]))
-  return [...records].sort((a, b) => {
+  const pinned = records.filter((r) => r.pinned === 1)
+  const unpinned = records.filter((r) => r.pinned !== 1)
+  pinned.sort((a, b) => dayjs(b.updatedAt).valueOf() - dayjs(a.updatedAt).valueOf())
+  unpinned.sort((a, b) => {
     const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER
     const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER
     if (aIndex === bIndex) {
@@ -312,6 +317,7 @@ function sortBySavedOrder(records) {
     }
     return aIndex - bIndex
   })
+  return [...pinned, ...unpinned]
 }
 
 function syncSelected() {
@@ -406,15 +412,28 @@ function handleDragEnd() {
 }
 
 async function loadData() {
-  const data = await noteApi.pageNotes({
+  const params = {
     current: pagination.current,
     size: pagination.size,
-    ...query
-  })
+    keyword: query.keyword || undefined,
+    category: query.category || undefined,
+    tag: query.tag || undefined,
+    starred: query.starred || undefined
+  }
+  const data = await noteApi.pageNotes(params)
   const records = sortBySavedOrder(data.records || [])
   tableData.value = records
   pagination.total = data.total || 0
   syncSelected()
+}
+
+function resetQuery() {
+  query.keyword = ''
+  query.category = ''
+  query.tag = ''
+  query.starred = false
+  pagination.current = 1
+  loadData()
 }
 
 function changePage(page) {

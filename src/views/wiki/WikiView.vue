@@ -112,19 +112,29 @@
                 />
               </div>
               <div class="toolbar-row" style="gap: 8px;">
+                <el-select v-model="editContentType" size="small" style="width: 110px;" @change="onContentTypeChange">
+                  <el-option label="Markdown" value="markdown" />
+                  <el-option label="富文本" value="html" />
+                </el-select>
                 <el-button text @click="openPageDialog(currentPage)">编辑信息</el-button>
                 <el-tag type="info" size="small">{{ currentPage.updatedAt ? formatDate(currentPage.updatedAt) : '' }}</el-tag>
               </div>
             </div>
             <div class="wiki-editor-body">
-              <el-input
+              <MarkdownEditor
+                v-if="editContentType === 'markdown'"
                 v-model="editContent"
-                type="textarea"
-                :autosize="false"
-                placeholder="在这里书写内容，支持自由文本..."
-                class="wiki-textarea"
-                @input="debouncedSave"
+                @update:modelValue="debouncedSave"
               />
+              <div v-else class="section-card" style="width: 100%; flex: 1; min-height: 0; overflow: auto;">
+                <QuillEditor
+                  v-model:content="editContent"
+                  content-type="html"
+                  toolbar="full"
+                  theme="snow"
+                  @update:content="debouncedSave"
+                />
+              </div>
             </div>
           </template>
           <template v-else>
@@ -190,6 +200,8 @@ import { ArrowDown, ArrowLeft, ArrowRight, Collection } from '@element-plus/icon
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { noteApi } from '@/api/note'
+import MarkdownEditor from '../notes/MarkdownEditor.vue'
+import { QuillEditor } from '@vueup/vue-quill'
 
 const route = useRoute()
 const router = useRouter()
@@ -201,6 +213,7 @@ const flatPages = ref([])
 const currentPage = ref(null)
 const editTitle = ref('')
 const editContent = ref('')
+const editContentType = ref('markdown')
 const expanded = reactive({})
 
 const spaceDialogVisible = ref(false)
@@ -255,6 +268,7 @@ async function loadPage(id) {
   currentPage.value = res
   editTitle.value = res.title
   editContent.value = res.content || ''
+  editContentType.value = res.contentType || 'markdown'
 }
 
 let saveTimer = null
@@ -262,8 +276,13 @@ function debouncedSave() {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     if (!currentPage.value) return
-    await noteApi.updateWikiPage(currentPage.value.id, { content: editContent.value })
+    await noteApi.updateWikiPage(currentPage.value.id, { content: editContent.value, contentType: editContentType.value })
   }, 800)
+}
+
+function onContentTypeChange(val) {
+  if (!currentPage.value) return
+  noteApi.updateWikiPage(currentPage.value.id, { contentType: val })
 }
 
 async function saveTitle() {
@@ -562,22 +581,7 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   padding: 16px 24px;
-  overflow: hidden;
-}
-
-.wiki-textarea {
-  height: 100%;
-}
-
-.wiki-textarea :deep(.el-textarea__inner) {
-  height: 100% !important;
-  resize: none;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  font-size: 15px;
-  line-height: 1.9;
+  overflow: auto;
 }
 
 .wiki-editor-empty {
