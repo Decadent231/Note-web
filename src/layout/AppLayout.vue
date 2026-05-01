@@ -21,42 +21,57 @@
         text-color="var(--app-text-soft)"
         active-text-color="var(--app-text)"
       >
-        <el-menu-item index="/dashboard">
-          <el-icon><DataAnalysis /></el-icon>
-          <span>工作台</span>
-        </el-menu-item>
-        <el-menu-item index="/notes">
-          <el-icon><Document /></el-icon>
-          <span>工作笔记</span>
-        </el-menu-item>
-        <el-menu-item index="/vault">
-          <el-icon><Lock /></el-icon>
-          <span>密码保险箱</span>
-        </el-menu-item>
-        <el-menu-item index="/todos">
-          <el-icon><List /></el-icon>
-          <span>待办事项</span>
-        </el-menu-item>
-        <el-menu-item index="/trash">
-          <el-icon><Delete /></el-icon>
-          <span>回收站</span>
-        </el-menu-item>
-        <el-menu-item index="/calendar">
-          <el-icon><Calendar /></el-icon>
-          <span>日程日历</span>
-        </el-menu-item>
-        <el-menu-item index="/wiki">
-          <el-icon><Collection /></el-icon>
-          <span>知识库</span>
-        </el-menu-item>
-        <el-menu-item index="/activity">
-          <el-icon><Timer /></el-icon>
-          <span>操作日志</span>
-        </el-menu-item>
-        <el-menu-item index="/profile">
-          <el-icon><User /></el-icon>
-          <span>个人中心</span>
-        </el-menu-item>
+        <div class="nav-group">
+          <div class="nav-group-label">效率工具</div>
+          <el-menu-item index="/dashboard">
+            <el-icon><DataAnalysis /></el-icon>
+            <span>工作台</span>
+          </el-menu-item>
+          <el-menu-item index="/todos">
+            <el-icon><List /></el-icon>
+            <span>待办事项</span>
+          </el-menu-item>
+          <el-menu-item index="/calendar">
+            <el-icon><Calendar /></el-icon>
+            <span>日程日历</span>
+          </el-menu-item>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">知识管理</div>
+          <el-menu-item index="/notes">
+            <el-icon><Document /></el-icon>
+            <span>工作笔记</span>
+          </el-menu-item>
+          <el-menu-item index="/wiki">
+            <el-icon><Collection /></el-icon>
+            <span>知识库</span>
+          </el-menu-item>
+          <el-menu-item index="/files">
+            <el-icon><FolderOpened /></el-icon>
+            <span>文件库</span>
+          </el-menu-item>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">安全与系统</div>
+          <el-menu-item index="/vault">
+            <el-icon><Lock /></el-icon>
+            <span>密码保险箱</span>
+          </el-menu-item>
+          <el-menu-item index="/trash">
+            <el-icon><Delete /></el-icon>
+            <span>回收站</span>
+          </el-menu-item>
+          <el-menu-item index="/activity">
+            <el-icon><Timer /></el-icon>
+            <span>操作日志</span>
+          </el-menu-item>
+          <el-menu-item index="/profile">
+            <el-icon><User /></el-icon>
+            <span>个人中心</span>
+          </el-menu-item>
+        </div>
       </el-menu>
 
       <div class="sidebar-footer">
@@ -85,7 +100,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search, Calendar, Collection } from '@element-plus/icons-vue'
+import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search, Calendar, Collection, FolderOpened } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -206,6 +221,19 @@ function handleLogout() {
 
 .nav-menu :deep(.is-active) {
   background: rgba(56, 189, 248, 0.14);
+}
+
+.nav-group {
+  margin-bottom: 8px;
+}
+
+.nav-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--el-text-color-placeholder);
+  padding: 12px 14px 6px;
+  text-transform: uppercase;
 }
 
 .sidebar-footer {

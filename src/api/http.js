@@ -5,7 +5,7 @@ import { storage } from '@/utils/storage'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '',
-  timeout: 15000
+  timeout: 60000
 })
 
 http.interceptors.request.use((config) => {

@@ -16,6 +16,7 @@ const routes = [
       { path: 'calendar', name: 'calendar', component: () => import('@/views/calendar/CalendarView.vue'), meta: { title: '日程日历' } },
       { path: 'wiki', name: 'wiki', component: () => import('@/views/wiki/WikiView.vue'), meta: { title: '知识库' } },
       { path: 'wiki/:spaceId', name: 'wiki-space', component: () => import('@/views/wiki/WikiView.vue'), meta: { title: '知识库' } },
+      { path: 'files', name: 'files', component: () => import('@/views/files/FileAssetView.vue'), meta: { title: '文件库' } },
       { path: 'activity', name: 'activity', component: () => import('@/views/activity/ActivityView.vue'), meta: { title: '操作日志' } },
       { path: 'profile', name: 'profile', component: () => import('@/views/profile/ProfileView.vue'), meta: { title: '个人中心' } }
     ]

@@ -64,5 +64,21 @@ export const noteApi = {
   deleteWikiPage: (id) => http.delete(`/note/wiki/pages/${id}`),
   getWikiPage: (id) => http.get(`/note/wiki/pages/${id}`),
   listWikiPages: (spaceId) => http.get(`/note/wiki/spaces/${spaceId}/pages`),
-  getWikiPageTree: (spaceId) => http.get(`/note/wiki/spaces/${spaceId}/tree`)
+  getWikiPageTree: (spaceId) => http.get(`/note/wiki/spaces/${spaceId}/tree`),
+
+  // File Assets
+  uploadFile: (formData) => http.post('/note/files/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  pageFiles: (params) => http.get('/note/files', { params }),
+  getFile: (id) => http.get(`/note/files/${id}`),
+  updateFile: (id, params) => http.put(`/note/files/${id}`, null, { params }),
+  deleteFile: (id) => http.delete(`/note/files/${id}`),
+  listFileFolders: () => http.get('/note/files/folders'),
+  fileStorageStats: () => http.get('/note/files/stats'),
+
+  // Dashboard
+  dashboardOverview: () => http.get('/note/dashboard/overview'),
+  dashboardWeeklyReport: () => http.get('/note/dashboard/weekly-report'),
+  dashboardKnowledgeGrowth: (params) => http.get('/note/dashboard/knowledge-growth', { params }),
+  dashboardActivityHeatmap: (params) => http.get('/note/dashboard/activity-heatmap', { params }),
+  dashboardTopTodos: (params) => http.get('/note/dashboard/top-todos', { params })
 }
