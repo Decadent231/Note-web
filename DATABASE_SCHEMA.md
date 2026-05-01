@@ -234,3 +234,27 @@
 - 危险文件扩展名（exe/bat/cmd/sh 等）会被拒绝上传。
 - 默认最大文件大小 50MB，可通过环境变量 `FILE_MAX_SIZE_MB` 配置。
 - 存储路径可通过环境变量 `FILE_STORAGE_PATH` 配置，默认 `/data/note-files`。
+
+## 10. 笔记-文件关联表 `note_file`
+
+用途：笔记与文件的多对多关联关系。
+
+字段：
+
+- `id`：主键
+- `note_id`：笔记ID
+- `file_id`：文件ID
+- `created_at`：创建时间
+
+索引：
+
+- `uk_note_file`：唯一索引 `(note_id, file_id)`，防止重复关联
+- `idx_nf_note`：按笔记ID查询关联文件
+- `idx_nf_file`：按文件ID查询关联笔记
+
+说明：
+
+- 同一个文件可以关联多篇笔记。
+- 同一篇笔记可以关联多个文件。
+- 删除笔记或文件时，关联记录不自动级联删除（可手动清理）。
+- 迁移脚本：`note_upgrade_20260501_v5.sql`
