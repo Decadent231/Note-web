@@ -56,6 +56,14 @@
             <span v-else style="color: var(--el-text-color-placeholder);">—</span>
           </template>
         </el-table-column>
+        <el-table-column label="关联笔记" width="100" align="center">
+          <template #default="{ row }">
+            <el-button v-if="row._linkedNoteCount > 0" text type="primary" size="small" @click="viewLinkedNotes(row)">
+              {{ row._linkedNoteCount }} 篇
+            </el-button>
+            <span v-else style="color: var(--el-text-color-placeholder);">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="上传时间" width="160" align="center">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
@@ -144,6 +152,16 @@
         <pre v-else-if="previewType === 'text'" class="preview-text">{{ previewText }}</pre>
       </div>
     </el-dialog>
+
+    <el-dialog v-model="showLinkedNotes" :title="linkedFileName + ' - 关联笔记'" width="560px">
+      <div class="linked-notes-list">
+        <div v-for="n in linkedNotes" :key="n.id" class="linked-note-row">
+          <span class="linked-note-title">{{ n.title }}</span>
+          <span class="linked-note-time">{{ formatDate(n.updatedAt) }}</span>
+        </div>
+        <el-empty v-if="linkedNotes.length === 0" description="暂无关联笔记" :image-size="60" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -177,6 +195,10 @@ const previewUrl = ref('')
 const previewType = ref('')
 const previewName = ref('')
 const previewText = ref('')
+
+const showLinkedNotes = ref(false)
+const linkedNotes = ref([])
+const linkedFileName = ref('')
 
 function formatDate(v) {
   return v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'
@@ -235,11 +257,30 @@ async function loadData() {
       keyword: query.keyword || undefined,
       folder: query.folder || undefined
     })
-    files.value = data.records || []
+    const records = data.records || []
+    await Promise.all(records.map(async (r) => {
+      try {
+        const notes = await noteApi.listFileNotes(r.id)
+        r._linkedNoteCount = (notes || []).length
+      } catch {
+        r._linkedNoteCount = 0
+      }
+    }))
+    files.value = records
     pagination.total = data.total || 0
   } finally {
-  loading.value = false
+    loading.value = false
   }
+}
+
+async function viewLinkedNotes(row) {
+  linkedFileName.value = row.originalName
+  try {
+    linkedNotes.value = await noteApi.listFileNotes(row.id) || []
+  } catch {
+    linkedNotes.value = []
+  }
+  showLinkedNotes.value = true
 }
 
 async function loadFolders() {
@@ -513,5 +554,35 @@ onMounted(() => {
   background: var(--app-panel-strong);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.linked-notes-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.linked-note-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.linked-note-row:hover {
+  background: var(--el-fill-color-lighter);
+}
+
+.linked-note-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.linked-note-time {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  white-space: nowrap;
 }
 </style>

@@ -133,36 +133,6 @@
       </div>
     </div>
 
-    <el-dialog v-model="detailVisible" width="960px" class="detail-dialog">
-      <template #header>
-        <div class="detail-header">
-          <div>
-            <div class="detail-title">{{ detailItem?.title || '笔记详情' }}</div>
-            <div class="page-subtitle">完整查看当前笔记内容与元信息</div>
-          </div>
-          <el-button v-if="detailItem" type="primary" plain @click="editItem(detailItem)">编辑笔记</el-button>
-        </div>
-      </template>
-      <template v-if="detailItem">
-        <div class="detail-meta">
-          <el-tag effect="dark">{{ detailItem.category || '未分类' }}</el-tag>
-          <el-tag v-if="detailItem.contentType === 'markdown'" type="warning" effect="plain">Markdown</el-tag>
-          <el-tag
-            v-for="tag in splitTags(detailItem.tags)"
-            :key="tag"
-            size="small"
-            effect="plain"
-          >
-            {{ tag }}
-          </el-tag>
-          <span class="detail-time">更新于 {{ formatDate(detailItem.updatedAt) }}</span>
-        </div>
-        <div v-if="detailItem.summary" class="detail-summary">{{ detailItem.summary }}</div>
-        <div v-if="detailItem.contentType === 'markdown'" class="detail-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(detailItem.content || '')"></div>
-        <div v-else class="detail-content ql-editor scrollbar-hidden" v-html="detailItem.content || '<p>暂无内容</p>'"></div>
-      </template>
-    </el-dialog>
-
     <el-dialog v-model="dialogVisible" :title="form.id ? '编辑笔记' : '新建笔记'" width="960px">
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <div class="toolbar-row">
@@ -208,6 +178,20 @@
             <QuillEditor v-model:content="form.content" content-type="html" toolbar="full" theme="snow" />
           </div>
         </el-form-item>
+
+        <el-form-item label="关联文件">
+          <div class="linked-files-area">
+            <div v-if="linkedFiles.length" class="linked-files-list">
+              <div v-for="f in linkedFiles" :key="f.id" class="linked-file-chip">
+                <span class="linked-file-name">{{ f.originalName }}</span>
+                <span class="linked-file-size">{{ formatSize(f.fileSize) }}</span>
+                <el-button text type="danger" size="small" @click="unlinkFile(f)">移除</el-button>
+              </div>
+            </div>
+            <div v-else class="linked-files-empty">暂未关联文件</div>
+            <el-button type="primary" plain size="small" @click="openFilePicker">选择文件</el-button>
+          </div>
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -215,6 +199,81 @@
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="filePickerVisible" title="选择文件" width="640px" destroy-on-close>
+      <el-input v-model="filePickerKeyword" placeholder="搜索文件名" clearable @input="debounceLoadFiles" style="margin-bottom: 12px;" />
+      <div class="file-picker-list">
+        <div
+          v-for="f in availableFiles"
+          :key="f.id"
+          class="file-picker-row"
+          :class="{ selected: isFileLinked(f.id) }"
+          @click="toggleFileSelection(f)"
+        >
+          <div class="file-picker-info">
+            <span class="file-picker-name">{{ f.originalName }}</span>
+            <span class="file-picker-size">{{ formatSize(f.fileSize) }}</span>
+          </div>
+          <el-icon v-if="isFileLinked(f.id)" class="file-picker-check"><Check /></el-icon>
+        </div>
+        <el-empty v-if="availableFiles.length === 0" description="暂无可选文件" :image-size="60" />
+      </div>
+      <div class="pagination-wrap" style="margin-top: 8px;">
+        <el-pagination
+          background
+          small
+          layout="prev, pager, next, total"
+          :total="filePickerTotal"
+          :page-size="filePickerSize"
+          :current-page="filePickerCurrent"
+          @current-change="changeFilePickerPage"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="filePickerVisible = false">取消</el-button>
+        <el-button type="primary" :loading="linkingFiles" @click="confirmLinkFiles">确定关联</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="detailVisible" width="960px" class="detail-dialog" @open="loadDetailFiles">
+      <template #header>
+        <div class="detail-header">
+          <div>
+            <div class="detail-title">{{ detailItem?.title || '笔记详情' }}</div>
+            <div class="page-subtitle">完整查看当前笔记内容与元信息</div>
+          </div>
+          <el-button v-if="detailItem" type="primary" plain @click="editItem(detailItem)">编辑笔记</el-button>
+        </div>
+      </template>
+      <template v-if="detailItem">
+        <div class="detail-meta">
+          <el-tag effect="dark">{{ detailItem.category || '未分类' }}</el-tag>
+          <el-tag v-if="detailItem.contentType === 'markdown'" type="warning" effect="plain">Markdown</el-tag>
+          <el-tag
+            v-for="tag in splitTags(detailItem.tags)"
+            :key="tag"
+            size="small"
+            effect="plain"
+          >
+            {{ tag }}
+          </el-tag>
+          <span class="detail-time">更新于 {{ formatDate(detailItem.updatedAt) }}</span>
+        </div>
+        <div v-if="detailItem.summary" class="detail-summary">{{ detailItem.summary }}</div>
+        <div v-if="detailItem.contentType === 'markdown'" class="detail-content md-preview-body scrollbar-hidden" v-html="renderMarkdown(detailItem.content || '')"></div>
+        <div v-else class="detail-content ql-editor scrollbar-hidden" v-html="detailItem.content || '<p>暂无内容</p>'"></div>
+        <div v-if="detailFiles.length" class="detail-files-section">
+          <div class="detail-files-title">关联文件</div>
+          <div class="linked-files-list">
+            <div v-for="f in detailFiles" :key="f.id" class="linked-file-chip">
+              <span class="linked-file-name">{{ f.originalName }}</span>
+              <span class="linked-file-size">{{ formatSize(f.fileSize) }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -223,7 +282,7 @@ import { onMounted, reactive, ref } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuillEditor } from '@vueup/vue-quill'
-import { Top, Star, StarFilled } from '@element-plus/icons-vue'
+import { Top, Star, StarFilled, Check } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import { noteApi } from '@/api/note'
@@ -271,6 +330,18 @@ const form = reactive({
   content: '',
   contentType: 'html'
 })
+
+const linkedFiles = ref([])
+const detailFiles = ref([])
+const filePickerVisible = ref(false)
+const filePickerKeyword = ref('')
+const availableFiles = ref([])
+const filePickerTotal = ref(0)
+const filePickerCurrent = ref(1)
+const filePickerSize = 10
+const linkingFiles = ref(false)
+const pendingLinkFileIds = ref([])
+let filePickerDebounce = null
 
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
@@ -336,6 +407,7 @@ function syncSelected() {
 function resetForm() {
   Object.assign(form, { id: null, title: '', category: '', tags: '', summary: '', content: '', contentType: 'html' })
   selectedTemplateId.value = null
+  linkedFiles.value = []
 }
 
 async function loadTemplates() {
@@ -363,6 +435,7 @@ function openCreate() {
 
 function openDetail(item) {
   detailItem.value = item
+  detailFiles.value = []
   detailVisible.value = true
 }
 
@@ -378,6 +451,9 @@ function editItem(row) {
   })
   detailVisible.value = false
   dialogVisible.value = true
+  if (row.id) {
+    loadLinkedFiles(row.id)
+  }
 }
 
 function reorderNotes(sourceIndex, targetIndex) {
@@ -489,6 +565,107 @@ async function removeItem(id) {
     detailItem.value = null
   }
   await loadData()
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let size = bytes
+  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
+  return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i]
+}
+
+async function loadLinkedFiles(noteId) {
+  try {
+    linkedFiles.value = await noteApi.listNoteFiles(noteId)
+  } catch {
+    linkedFiles.value = []
+  }
+}
+
+async function loadDetailFiles() {
+  if (!detailItem.value?.id) return
+  try {
+    detailFiles.value = await noteApi.listNoteFiles(detailItem.value.id)
+  } catch {
+    detailFiles.value = []
+  }
+}
+
+async function unlinkFile(f) {
+  if (!form.id) return
+  await noteApi.unlinkNoteFile(form.id, f.id)
+  linkedFiles.value = linkedFiles.value.filter(item => item.id !== f.id)
+  ElMessage.success('已移除关联')
+}
+
+function isFileLinked(fileId) {
+  return linkedFiles.value.some(f => f.id === fileId) || pendingLinkFileIds.value.includes(fileId)
+}
+
+function toggleFileSelection(f) {
+  const idx = pendingLinkFileIds.value.indexOf(f.id)
+  if (idx >= 0) {
+    pendingLinkFileIds.value.splice(idx, 1)
+  } else if (!linkedFiles.value.some(lf => lf.id === f.id)) {
+    pendingLinkFileIds.value.push(f.id)
+  }
+}
+
+function openFilePicker() {
+  pendingLinkFileIds.value = []
+  filePickerKeyword.value = ''
+  filePickerCurrent.value = 1
+  filePickerVisible.value = true
+  loadAvailableFiles()
+}
+
+async function loadAvailableFiles() {
+  try {
+    const data = await noteApi.pageFiles({
+      current: filePickerCurrent.value,
+      size: filePickerSize,
+      keyword: filePickerKeyword.value || undefined
+    })
+    availableFiles.value = data.records || []
+    filePickerTotal.value = data.total || 0
+  } catch {
+    availableFiles.value = []
+  }
+}
+
+function changeFilePickerPage(page) {
+  filePickerCurrent.value = page
+  loadAvailableFiles()
+}
+
+function debounceLoadFiles() {
+  if (filePickerDebounce) clearTimeout(filePickerDebounce)
+  filePickerDebounce = setTimeout(() => {
+    filePickerCurrent.value = 1
+    loadAvailableFiles()
+  }, 300)
+}
+
+async function confirmLinkFiles() {
+  if (!pendingLinkFileIds.value.length) {
+    filePickerVisible.value = false
+    return
+  }
+  if (!form.id) {
+    ElMessage.warning('请先保存笔记后再关联文件')
+    return
+  }
+  linkingFiles.value = true
+  try {
+    await noteApi.linkNoteFiles(form.id, pendingLinkFileIds.value)
+    await loadLinkedFiles(form.id)
+    ElMessage.success('关联成功')
+    filePickerVisible.value = false
+  } finally {
+    linkingFiles.value = false
+  }
 }
 
 onMounted(loadData)
@@ -941,5 +1118,101 @@ html.dark .note-row {
 
 html.dark .note-row:hover {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.34);
+}
+
+.linked-files-area {
+  width: 100%;
+}
+
+.linked-files-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.linked-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  font-size: 13px;
+}
+
+.linked-file-name {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.linked-file-size {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.linked-files-empty {
+  color: var(--el-text-color-placeholder);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.detail-files-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.detail-files-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--el-text-color-primary);
+}
+
+.file-picker-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.file-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.file-picker-row:hover {
+  background: var(--el-fill-color-lighter);
+}
+
+.file-picker-row.selected {
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 60%, transparent);
+}
+
+.file-picker-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-picker-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.file-picker-size {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.file-picker-check {
+  color: var(--el-color-primary);
+  font-size: 18px;
 }
 </style>

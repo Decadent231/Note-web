@@ -80,5 +80,11 @@ export const noteApi = {
   dashboardWeeklyReport: () => http.get('/note/dashboard/weekly-report'),
   dashboardKnowledgeGrowth: (params) => http.get('/note/dashboard/knowledge-growth', { params }),
   dashboardActivityHeatmap: (params) => http.get('/note/dashboard/activity-heatmap', { params }),
-  dashboardTopTodos: (params) => http.get('/note/dashboard/top-todos', { params })
+  dashboardTopTodos: (params) => http.get('/note/dashboard/top-todos', { params }),
+
+  // Note-File links
+  linkNoteFiles: (noteId, fileIds) => http.post(`/note/notes/${noteId}/files`, fileIds),
+  unlinkNoteFile: (noteId, fileId) => http.delete(`/note/notes/${noteId}/files/${fileId}`),
+  listNoteFiles: (noteId) => http.get(`/note/notes/${noteId}/files`),
+  listFileNotes: (fileId) => http.get(`/note/files/${fileId}/notes`)
 }
