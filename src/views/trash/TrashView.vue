@@ -113,4 +113,22 @@ onMounted(loadData)
   display: flex;
   gap: 4px;
 }
+
+@media (max-width: 768px) {
+  .trash-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .trash-actions {
+    align-self: flex-end;
+  }
+
+  .trash-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
 </style>

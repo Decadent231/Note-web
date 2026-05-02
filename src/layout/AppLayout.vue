@@ -1,88 +1,107 @@
 <template>
   <div class="layout-shell">
-    <aside class="layout-sidebar glass-panel">
-      <div class="brand-block">
-        <div class="brand-kicker">WORKSPACE</div>
-        <div class="brand-title">Note Flow</div>
-        <div class="brand-subtitle">个人工作笔记 + 密码管理 + 待办协作</div>
-      </div>
+    <div class="mobile-topbar">
+      <el-button class="hamburger-btn" text @click="drawerVisible = true">
+        <el-icon :size="22"><Operation /></el-icon>
+      </el-button>
+      <span class="mobile-topbar-title">Note Flow</span>
+      <el-button class="mobile-search-btn" text @click="searchVisible = true">
+        <el-icon :size="20"><Search /></el-icon>
+      </el-button>
+    </div>
 
-      <div class="search-trigger" @click="searchVisible = true">
-        <el-icon><Search /></el-icon>
-        <span>搜索...</span>
-        <span class="search-trigger-shortcut">⌘K</span>
-      </div>
-
-      <el-menu
-        class="nav-menu"
-        :default-active="route.path"
-        router
-        background-color="transparent"
-        text-color="var(--app-text-soft)"
-        active-text-color="var(--app-text)"
-      >
-        <div class="nav-group">
-          <div class="nav-group-label">效率工具</div>
-          <el-menu-item index="/dashboard">
-            <el-icon><DataAnalysis /></el-icon>
-            <span>工作台</span>
-          </el-menu-item>
-          <el-menu-item index="/todos">
-            <el-icon><List /></el-icon>
-            <span>待办事项</span>
-          </el-menu-item>
-          <el-menu-item index="/calendar">
-            <el-icon><Calendar /></el-icon>
-            <span>日程日历</span>
-          </el-menu-item>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-group-label">知识管理</div>
-          <el-menu-item index="/notes">
-            <el-icon><Document /></el-icon>
-            <span>工作笔记</span>
-          </el-menu-item>
-          <el-menu-item index="/wiki">
-            <el-icon><Collection /></el-icon>
-            <span>知识库</span>
-          </el-menu-item>
-          <el-menu-item index="/files">
-            <el-icon><FolderOpened /></el-icon>
-            <span>文件库</span>
-          </el-menu-item>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-group-label">安全与系统</div>
-          <el-menu-item index="/vault">
-            <el-icon><Lock /></el-icon>
-            <span>密码保险箱</span>
-          </el-menu-item>
-          <el-menu-item index="/trash">
-            <el-icon><Delete /></el-icon>
-            <span>回收站</span>
-          </el-menu-item>
-          <el-menu-item index="/activity">
-            <el-icon><Timer /></el-icon>
-            <span>操作日志</span>
-          </el-menu-item>
-          <el-menu-item index="/profile">
-            <el-icon><User /></el-icon>
-            <span>个人中心</span>
-          </el-menu-item>
-        </div>
-      </el-menu>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-row">
-          <div class="sidebar-user">
-            <div class="sidebar-user-name">{{ userStore.user?.nickname }}</div>
-            <div class="sidebar-user-email">{{ userStore.user?.email }}</div>
+    <aside class="layout-sidebar glass-panel" :class="{ 'drawer-visible': drawerVisible }">
+      <div class="drawer-overlay" @click="drawerVisible = false"></div>
+      <div class="sidebar-inner">
+        <div class="brand-block">
+          <div class="mobile-drawer-close">
+            <el-button text @click="drawerVisible = false">
+              <el-icon :size="20"><Close /></el-icon>
+            </el-button>
           </div>
-          <el-button class="theme-fab" circle @click="themeStore.toggleTheme()">
-            <el-icon><component :is="themeStore.mode === 'dark' ? Sunny : Moon" /></el-icon>
-          </el-button>
+          <div class="brand-kicker">WORKSPACE</div>
+          <div class="brand-title">Note Flow</div>
+          <div class="brand-subtitle">个人工作笔记 + 密码管理 + 待办协作</div>
+        </div>
+
+        <div class="search-trigger" @click="searchVisible = true; drawerVisible = false">
+          <el-icon><Search /></el-icon>
+          <span>搜索...</span>
+          <span class="search-trigger-shortcut">⌘K</span>
+        </div>
+
+        <el-menu
+          class="nav-menu"
+          :default-active="route.path"
+          router
+          background-color="transparent"
+          text-color="var(--app-text-soft)"
+          active-text-color="var(--app-text)"
+          @select="drawerVisible = false"
+        >
+          <div class="nav-group">
+            <div class="nav-group-label">效率工具</div>
+            <el-menu-item index="/dashboard">
+              <el-icon><DataAnalysis /></el-icon>
+              <span>工作台</span>
+            </el-menu-item>
+            <el-menu-item index="/todos">
+              <el-icon><List /></el-icon>
+              <span>待办事项</span>
+            </el-menu-item>
+            <el-menu-item index="/calendar">
+              <el-icon><Calendar /></el-icon>
+              <span>日程日历</span>
+            </el-menu-item>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-group-label">知识管理</div>
+            <el-menu-item index="/notes">
+              <el-icon><Document /></el-icon>
+              <span>工作笔记</span>
+            </el-menu-item>
+            <el-menu-item index="/wiki">
+              <el-icon><Collection /></el-icon>
+              <span>知识库</span>
+            </el-menu-item>
+            <el-menu-item index="/files">
+              <el-icon><FolderOpened /></el-icon>
+              <span>文件库</span>
+            </el-menu-item>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-group-label">安全与系统</div>
+            <el-menu-item index="/vault">
+              <el-icon><Lock /></el-icon>
+              <span>密码保险箱</span>
+            </el-menu-item>
+            <el-menu-item index="/trash">
+              <el-icon><Delete /></el-icon>
+              <span>回收站</span>
+            </el-menu-item>
+            <el-menu-item index="/activity">
+              <el-icon><Timer /></el-icon>
+              <span>操作日志</span>
+            </el-menu-item>
+            <el-menu-item index="/profile">
+              <el-icon><User /></el-icon>
+              <span>个人中心</span>
+            </el-menu-item>
+          </div>
+        </el-menu>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-footer-row">
+            <div class="sidebar-user">
+              <div class="sidebar-user-name">{{ userStore.user?.nickname }}</div>
+              <div class="sidebar-user-email">{{ userStore.user?.email }}</div>
+            </div>
+            <el-button class="theme-fab" circle @click="themeStore.toggleTheme()">
+              <el-icon><component :is="themeStore.mode === 'dark' ? Sunny : Moon" /></el-icon>
+            </el-button>
+          </div>
         </div>
       </div>
     </aside>
@@ -98,9 +117,9 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search, Calendar, Collection, FolderOpened } from '@element-plus/icons-vue'
+import { DataAnalysis, Delete, Document, List, Lock, Moon, Sunny, Timer, User, Search, Calendar, Collection, FolderOpened, Operation, Close } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -110,6 +129,11 @@ const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const searchVisible = ref(false)
+const drawerVisible = ref(false)
+
+watch(() => route.path, () => {
+  drawerVisible.value = false
+})
 
 function handleKeydown(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -133,6 +157,18 @@ function handleLogout() {
 </script>
 
 <style scoped>
+.mobile-topbar {
+  display: none;
+}
+
+.mobile-drawer-close {
+  display: none;
+}
+
+.drawer-overlay {
+  display: none;
+}
+
 .layout-shell {
   height: 100vh;
   display: grid;
@@ -149,6 +185,13 @@ function handleLogout() {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
 .brand-block {
@@ -292,30 +335,108 @@ function handleLogout() {
   box-shadow: 0 22px 42px rgba(15, 23, 42, 0.24);
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 768px) {
   .layout-shell {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+    overflow: visible;
     height: auto;
     min-height: 100vh;
-    overflow: visible;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--app-panel);
+    border-bottom: 1px solid var(--app-border);
+    backdrop-filter: blur(18px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .mobile-topbar-title {
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .hamburger-btn {
+    padding: 8px;
+  }
+
+  .mobile-search-btn {
+    padding: 8px;
   }
 
   .layout-sidebar {
-    padding-bottom: 12px;
-    overflow: visible;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 1000;
+    border-radius: 0;
+    padding: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
   }
 
-  .nav-menu {
-    overflow: visible;
+  .layout-sidebar.drawer-visible {
+    transform: translateX(0);
+  }
+
+  .drawer-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: -1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .drawer-visible .drawer-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar-inner {
+    padding: 22px 18px;
+    overflow: auto;
+    height: 100%;
+  }
+
+  .mobile-drawer-close {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
   }
 
   .layout-main {
+    flex: 1;
+    min-height: 0;
     overflow: visible;
   }
 
   .layout-content {
     height: auto;
     overflow: visible;
+    padding-right: 0;
+    padding-bottom: 32px;
+  }
+
+  .search-trigger-shortcut {
+    display: none;
   }
 }
 </style>

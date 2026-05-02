@@ -519,6 +519,36 @@ onMounted(loadData)
 @media (max-width: 800px) {
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .split-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .trend-chart {
+    height: 200px;
+  }
+
+  .status-chart {
+    height: 200px;
+  }
+
+  .module-chart {
+    height: 180px;
+  }
+
+  .heatmap-chart {
+    height: 160px;
+  }
+
+  .report-item-value {
+    font-size: 22px;
+  }
+
+  .today-list {
+    max-height: 200px;
   }
 }
 

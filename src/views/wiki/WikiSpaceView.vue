@@ -13,44 +13,53 @@
         </div>
       </div>
       <div class="wiki-space-header-right">
+        <el-button class="mobile-tree-toggle" text @click="treeDrawerVisible = !treeDrawerVisible">
+          <el-icon><Operation /></el-icon>
+        </el-button>
         <el-button type="primary" plain @click="showAddPage = true">
           <el-icon><Plus /></el-icon>
-          新建页面
+          <span class="hide-on-mobile">新建页面</span>
         </el-button>
       </div>
     </div>
 
     <div class="wiki-space-body">
-      <div class="wiki-tree-panel section-card">
-        <div class="tree-panel-header">
-          <span class="tree-panel-title">目录</span>
-        </div>
-        <div class="tree-panel-body scrollbar-hidden">
-          <el-tree
-            v-if="treeData.length > 0"
-            :data="treeData"
-            :props="{ label: 'title', children: 'children' }"
-            node-key="id"
-            highlight-current
-            default-expand-all
-            :current-node-key="currentPageId"
-            @current-change="onTreeSelect"
-          >
-            <template #default="{ node, data }">
-              <div class="tree-node-row">
-                <span class="tree-node-label">{{ node.label }}</span>
-                <div class="tree-node-actions">
-                  <el-button text size="small" type="primary" @click.stop="addChildPage(data)">
-                    <el-icon size="14"><Plus /></el-icon>
-                  </el-button>
-                  <el-button text size="small" type="danger" @click.stop="deletePageNode(data)">
-                    <el-icon size="14"><Delete /></el-icon>
-                  </el-button>
+      <div class="wiki-tree-panel section-card" :class="{ 'tree-drawer-visible': treeDrawerVisible }">
+        <div class="tree-drawer-overlay" @click="treeDrawerVisible = false"></div>
+        <div class="tree-panel-inner">
+          <div class="tree-panel-header">
+            <span class="tree-panel-title">目录</span>
+            <el-button class="tree-panel-close" text @click="treeDrawerVisible = false">
+              <el-icon><Close /></el-icon>
+            </el-button>
+          </div>
+          <div class="tree-panel-body scrollbar-hidden">
+            <el-tree
+              v-if="treeData.length > 0"
+              :data="treeData"
+              :props="{ label: 'title', children: 'children' }"
+              node-key="id"
+              highlight-current
+              default-expand-all
+              :current-node-key="currentPageId"
+              @current-change="onTreeSelect"
+            >
+              <template #default="{ node, data }">
+                <div class="tree-node-row">
+                  <span class="tree-node-label">{{ node.label }}</span>
+                  <div class="tree-node-actions">
+                    <el-button text size="small" type="primary" @click.stop="addChildPage(data)">
+                      <el-icon size="14"><Plus /></el-icon>
+                    </el-button>
+                    <el-button text size="small" type="danger" @click.stop="deletePageNode(data)">
+                      <el-icon size="14"><Delete /></el-icon>
+                    </el-button>
+                  </div>
                 </div>
-              </div>
-            </template>
-          </el-tree>
-          <el-empty v-else description="还没有页面，点击「新建页面」开始写作" :image-size="80" />
+              </template>
+            </el-tree>
+            <el-empty v-else description="还没有页面，点击「新建页面」开始写作" :image-size="80" />
+          </div>
         </div>
       </div>
 
@@ -176,7 +185,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Delete, ArrowLeft, Check } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, Check, Operation, Close } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -194,6 +203,7 @@ const treeData = ref([])
 const currentPageId = ref(null)
 const currentPage = ref(null)
 const saving = ref(false)
+const treeDrawerVisible = ref(false)
 
 const showAddPage = ref(false)
 const newPage = reactive({ title: '', contentType: 'markdown', parentId: null })
@@ -253,6 +263,7 @@ async function onTreeSelect(data) {
   currentPageId.value = data.id
   try { currentPage.value = await noteApi.getWikiPage(data.id) } catch { /* ignore */ }
   loadLinkedFiles(data.id)
+  treeDrawerVisible.value = false
 }
 
 function formatSize(bytes) {
@@ -843,12 +854,6 @@ onMounted(() => { loadSpace(); loadTree() })
   justify-content: center;
 }
 
-@media (max-width: 900px) {
-  .wiki-space-body {
-    grid-template-columns: 1fr;
-  }
-}
-
 :deep(.file-embed-card) {
   display: flex;
   align-items: center;
@@ -969,5 +974,135 @@ onMounted(() => { loadSpace(); loadTree() })
   background: var(--el-fill-color-lighter);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.mobile-tree-toggle {
+  display: none;
+}
+
+.tree-panel-close {
+  display: none;
+}
+
+.tree-drawer-overlay {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .wiki-space-body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    overflow: visible;
+  }
+
+  .wiki-tree-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 900;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wiki-tree-panel.tree-drawer-visible {
+    transform: translateX(0);
+  }
+
+  .tree-drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 899;
+  }
+
+  .tree-drawer-visible .tree-drawer-overlay {
+    display: block;
+  }
+
+  .tree-panel-inner {
+    position: relative;
+    z-index: 901;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tree-panel-close {
+    display: flex;
+  }
+
+  .mobile-tree-toggle {
+    display: flex;
+  }
+
+  .hide-on-mobile {
+    display: none;
+  }
+
+  .wiki-space-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 18px;
+  }
+
+  .wiki-space-header-left {
+    width: 100%;
+  }
+
+  .wiki-space-header-right {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .content-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px 8px;
+  }
+
+  .content-title {
+    font-size: 17px;
+  }
+
+  .content-panel-body {
+    padding: 14px;
+  }
+
+  .content-panel-body .file-embed-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .file-preview-body {
+    min-height: 200px;
+  }
+
+  .file-preview-img {
+    max-height: 55vh;
+  }
+
+  .file-preview-iframe {
+    height: 55vh;
+  }
+
+  .file-preview-text {
+    max-height: 55vh;
+    font-size: 12px;
+    padding: 10px;
+  }
 }
 </style>

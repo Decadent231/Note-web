@@ -727,4 +727,62 @@ html.dark .list-item {
 html.dark .list-item:hover {
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.3);
 }
+
+@media (max-width: 768px) {
+  .header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-row .toolbar-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-card :deep(.toolbar-row) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-card :deep(.el-input),
+  .filter-card :deep(.el-select) {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .todo-card-top {
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+  }
+
+  .todo-card-top .el-tag {
+    grid-column: 2;
+  }
+
+  .todo-actions {
+    flex-wrap: wrap;
+  }
+
+  .todo-actions .el-select {
+    width: 100px !important;
+  }
+
+  .list-item {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .list-item-actions {
+    align-self: flex-end;
+  }
+
+  .list-item-meta {
+    flex-wrap: wrap;
+  }
+
+  .list-item-desc {
+    white-space: normal;
+  }
+}
 </style>

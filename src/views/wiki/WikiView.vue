@@ -201,4 +201,21 @@ onMounted(loadSpaces)
   background: var(--el-color-primary-light-9);
   box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.2);
 }
+
+@media (max-width: 768px) {
+  .page-action-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .space-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .space-card {
+    padding: 18px;
+  }
+}
 </style>

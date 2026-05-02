@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <div class="section-card" style="padding: 18px; margin-bottom: 18px;">
+    <div class="section-card file-filter-card" style="padding: 18px; margin-bottom: 18px;">
       <div class="toolbar-row">
         <el-input v-model="query.keyword" placeholder="搜索文件名 / 备注" clearable style="max-width: 260px;" @keyup.enter="loadData" />
         <el-input v-model="query.linkedTitle" placeholder="按关联笔记/知识库标题搜索" clearable style="max-width: 260px;" @keyup.enter="loadData" />
@@ -624,5 +624,85 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
   white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .file-filter-card :deep(.toolbar-row) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-filter-card :deep(.el-input),
+  .file-filter-card :deep(.el-select) {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .file-stats-bar {
+    gap: 10px;
+  }
+
+  .stat-item {
+    padding: 12px 16px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .file-table-card :deep(.el-table) {
+    font-size: 13px;
+  }
+
+  .file-table-card :deep(.el-table__header-wrapper) {
+    display: none;
+  }
+
+  .file-table-card :deep(.el-table__body-wrapper .el-table__row) {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .file-table-card :deep(.el-table__body-wrapper td) {
+    border: none;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    width: 100% !important;
+  }
+
+  .file-table-card :deep(.el-table__body-wrapper td .cell) {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .file-name-text {
+    font-size: 14px;
+  }
+
+  .preview-container {
+    min-height: 250px;
+  }
+
+  .preview-image {
+    max-height: 55vh;
+  }
+
+  .preview-iframe {
+    height: 55vh;
+  }
+
+  .preview-text {
+    max-height: 55vh;
+    font-size: 12px;
+    padding: 10px;
+  }
 }
 </style>

@@ -372,4 +372,35 @@ onMounted(() => {})
     overflow: visible;
   }
 }
+
+@media (max-width: 768px) {
+  .vault-page-shell :deep(.toolbar-row) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vault-page-shell :deep(.toolbar-row[style*="justify-content: space-between"]) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .vault-page-shell :deep(.el-input[style*="max-width"]) {
+    max-width: 100% !important;
+  }
+
+  .vault-secret {
+    flex-wrap: wrap;
+  }
+
+  .vault-secret :deep(.el-input) {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .vault-gate-card {
+    max-width: 100% !important;
+    padding: 24px 20px !important;
+  }
+}
 </style>

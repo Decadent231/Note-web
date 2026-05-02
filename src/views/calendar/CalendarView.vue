@@ -576,4 +576,85 @@ async function removeEvent(id) {
     min-height: 100px;
   }
 }
+
+@media (max-width: 768px) {
+  .calendar-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .calendar-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .calendar-grid {
+    gap: 2px;
+  }
+
+  .calendar-cell-head {
+    font-size: 11px;
+  }
+
+  .calendar-cell-head .count {
+    display: none;
+  }
+
+  .calendar-cell {
+    min-height: 44px;
+    padding: 2px 3px;
+  }
+
+  .event-bar {
+    font-size: 10px;
+    padding: 1px 3px;
+    border-radius: 3px;
+  }
+
+  .week-cell-head {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .week-day-name {
+    font-size: 12px;
+  }
+
+  .week-day-num {
+    font-size: 14px;
+  }
+
+  .week-event-row {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .week-event-time {
+    display: none;
+  }
+
+  .week-event-title {
+    font-size: 13px;
+  }
+
+  .event-detail-title {
+    font-size: 17px;
+  }
+
+  .event-detail-desc {
+    font-size: 13px;
+  }
+
+  .color-picker-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .color-dot {
+    width: 24px;
+    height: 24px;
+  }
+}
 </style>
